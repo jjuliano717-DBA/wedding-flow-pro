@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Heart, MapPin, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import wedding1 from "@/assets/wedding-1.jpg";
@@ -140,10 +141,12 @@ export const FeaturedWeddings = () => {
           transition={{ delay: 0.4 }}
           className="text-center mt-12"
         >
-          <Button variant="outline" size="lg" className="gap-2">
-            View All Real Weddings
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          <Link to="/weddings">
+            <Button variant="outline" size="lg" className="gap-2">
+              View All Real Weddings
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>
