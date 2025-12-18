@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { 
   Camera, 
   Flower2, 
@@ -101,10 +102,12 @@ export const VendorCategories = () => {
           transition={{ delay: 0.4 }}
           className="text-center mt-12"
         >
-          <Button variant="champagne" size="lg" className="gap-2">
-            Browse All Vendors
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          <Link to="/vendors">
+            <Button variant="champagne" size="lg" className="gap-2">
+              Browse All Vendors
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>
