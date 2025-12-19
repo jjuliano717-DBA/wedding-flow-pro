@@ -1,14 +1,13 @@
 import { Link } from "react-router-dom";
 import { Heart, Instagram, Facebook, Twitter, Youtube, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 
 const footerLinks = {
   discover: [
     { name: "Real Weddings", href: "/weddings" },
     { name: "Find Vendors", href: "/vendors" },
     { name: "Browse Venues", href: "/venues" },
-    { name: "Planning Tips", href: "/tips" },
-    { name: "Wedding Styles", href: "/styles" },
   ],
   forProfessionals: [
     { name: "List Your Business", href: "/join-vendor" },
@@ -30,31 +29,35 @@ const footerLinks = {
 };
 
 export const Footer = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <footer className="bg-foreground text-primary-foreground">
-      {/* Newsletter Section */}
-      <div className="border-b border-primary-foreground/10">
-        <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="max-w-2xl mx-auto text-center">
-            <h3 className="font-serif text-2xl md:text-3xl mb-3">
-              Get Wedding Inspiration Delivered
-            </h3>
-            <p className="text-primary-foreground/70 mb-6">
-              Subscribe to receive the latest real weddings, planning tips, and exclusive offers.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 h-12 px-4 rounded-lg bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50 focus:outline-none focus:border-primary-foreground/40"
-              />
-              <Button variant="champagne" size="lg">
-                Subscribe
-              </Button>
+    <footer className="bg-foreground text-primary-foreground overflow-hidden w-full">
+      {/* Newsletter Section - Only for logged out users */}
+      {!isAuthenticated && (
+        <div className="border-b border-primary-foreground/10">
+          <div className="container mx-auto px-4 py-12 md:py-16">
+            <div className="max-w-2xl mx-auto text-center">
+              <h3 className="font-serif text-2xl md:text-3xl mb-3">
+                Get Wedding Inspiration Delivered
+              </h3>
+              <p className="text-primary-foreground/70 mb-6">
+                Subscribe to receive the latest real weddings, planning tips, and exclusive offers.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 h-12 px-4 rounded-lg bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50 focus:outline-none focus:border-primary-foreground/40"
+                />
+                <Button variant="champagne" size="lg">
+                  Subscribe
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-12 md:py-16">
