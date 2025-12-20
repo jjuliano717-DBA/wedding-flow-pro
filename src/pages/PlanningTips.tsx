@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Filter, BookOpen, User, Calendar, DollarSign, Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -149,9 +150,11 @@ const PlanningTips = () => {
                                             </div>
                                             <span className="text-xs text-muted-foreground font-medium">{tip.author}</span>
                                         </div>
-                                        <Button variant="ghost" size="sm" className="h-8 gap-1 text-primary p-0 hover:bg-transparent hover:underline">
-                                            Read Guide <ArrowRight className="w-3 h-3" />
-                                        </Button>
+                                        <Link to={`/tips/${tip.id}`}>
+                                            <Button variant="ghost" size="sm" className="h-8 gap-1 text-primary p-0 hover:bg-transparent hover:underline">
+                                                Read Guide <ArrowRight className="w-3 h-3" />
+                                            </Button>
+                                        </Link>
                                     </div>
                                 </div>
                             </motion.article>

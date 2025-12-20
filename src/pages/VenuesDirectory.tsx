@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Star, MapPin, Users, Filter, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -240,63 +241,65 @@ const VenuesDirectory = () => {
                 }}
                 className="group cursor-pointer"
               >
-                <div className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300">
-                  {/* Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <img
-                      src={venue.image}
-                      alt={venue.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <span className="px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-sm text-sm font-medium text-foreground">
-                        {venue.type}
-                      </span>
-                    </div>
-                    <div className="absolute top-4 right-4 flex gap-2">
-                      <span className="px-3 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-sm font-medium">
-                        {venue.price}
-                      </span>
-                      <button className="w-9 h-9 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors">
-                        <Heart className="w-4 h-4 text-rose-gold" />
-                      </button>
-                    </div>
-                    {(venue.indoor && venue.outdoor) && (
-                      <div className="absolute bottom-4 left-4 flex gap-2">
-                        <span className="px-2 py-1 rounded bg-card/90 backdrop-blur-sm text-xs font-medium text-foreground">
-                          Indoor & Outdoor
+                <Link to={`/venues/${venue.id}`}>
+                  <div className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300">
+                    {/* Image */}
+                    <div className="relative aspect-[4/3] overflow-hidden">
+                      <img
+                        src={venue.image}
+                        alt={venue.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute top-4 left-4">
+                        <span className="px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-sm text-sm font-medium text-foreground">
+                          {venue.type}
                         </span>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-6">
-                    <h3 className="font-serif text-xl text-foreground font-medium mb-2 group-hover:text-primary transition-colors">
-                      {venue.name}
-                    </h3>
-
-                    <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-4">
-                      <MapPin className="w-4 h-4" />
-                      {venue.location}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <div className="flex items-center gap-1.5">
-                        <Star className="w-4 h-4 text-champagne fill-champagne" />
-                        <span className="font-medium text-foreground">{venue.rating}</span>
-                        <span className="text-muted-foreground text-sm">
-                          ({venue.reviews})
+                      <div className="absolute top-4 right-4 flex gap-2">
+                        <span className="px-3 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-sm font-medium">
+                          {venue.price}
                         </span>
+                        <button className="w-9 h-9 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors">
+                          <Heart className="w-4 h-4 text-rose-gold" />
+                        </button>
                       </div>
+                      {(venue.indoor && venue.outdoor) && (
+                        <div className="absolute bottom-4 left-4 flex gap-2">
+                          <span className="px-2 py-1 rounded bg-card/90 backdrop-blur-sm text-xs font-medium text-foreground">
+                            Indoor & Outdoor
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                        <Users className="w-4 h-4" />
-                        {venue.capacity}
+                    {/* Content */}
+                    <div className="p-6">
+                      <h3 className="font-serif text-xl text-foreground font-medium mb-2 group-hover:text-primary transition-colors">
+                        {venue.name}
+                      </h3>
+
+                      <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-4">
+                        <MapPin className="w-4 h-4" />
+                        {venue.location}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <div className="flex items-center gap-1.5">
+                          <Star className="w-4 h-4 text-champagne fill-champagne" />
+                          <span className="font-medium text-foreground">{venue.rating}</span>
+                          <span className="text-muted-foreground text-sm">
+                            ({venue.reviews})
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                          <Users className="w-4 h-4" />
+                          {venue.capacity}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </motion.article>
             ))}
           </motion.div>

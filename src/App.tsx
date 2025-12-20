@@ -9,7 +9,9 @@ import Index from "./pages/Index";
 import RealWeddings from "./pages/RealWeddings";
 import VendorsDirectory from "./pages/VendorsDirectory";
 import VenuesDirectory from "./pages/VenuesDirectory";
+import VenueDetail from "./pages/VenueDetail";
 import PlanningTips from "./pages/PlanningTips";
+import PlanningTipDetail from "./pages/PlanningTipDetail";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Budget from "./pages/Budget";
@@ -41,7 +43,9 @@ const App = () => (
                 <Route path="/weddings" element={<RealWeddings />} />
                 <Route path="/vendors" element={<VendorsDirectory />} />
                 <Route path="/venues" element={<VenuesDirectory />} />
+                <Route path="/venues/:id" element={<VenueDetail />} />
                 <Route path="/tips" element={<PlanningTips />} />
+                <Route path="/tips/:id" element={<PlanningTipDetail />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/style-matcher" element={
