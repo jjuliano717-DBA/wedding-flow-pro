@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Heart } from "lucide-react";
 
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
 // Sign In Schema
@@ -42,7 +43,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, signUp } = useAuth(); // Destructure signUp
 
   // Sign In Form
   const signInForm = useForm<z.infer<typeof signInSchema>>({
@@ -68,43 +69,49 @@ const Auth = () => {
 
   async function onSignIn(values: z.infer<typeof signInSchema>) {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log("Sign in values:", values);
-
-      // Mock Login
-      let userRole = values.email === "admin@2planawedding.com" ? "admin" : "couple";
-
-      // Override role if admin
-      if (values.email === "admin@2planawedding.com") {
-        userRole = "admin";
-      }
-
-      login({
-        fullName: values.email === "admin@2planawedding.com" ? "Admin User" : "Jessica Smith",
-        email: values.email,
-        password: values.password,
-        role: userRole as "couple" | "business" | "admin",
+    try {
+      await login({
+        email: values.email.trim(),
+        password: values.password.trim(),
+        fullName: "", // Types require these, though ignored by login
+        role: "couple",
       });
+      // Navigation is handled by user state change or we can do it here if we want explicit redirect after success
+      // But AuthContext doesn't return the user immediately on login sometimes if strictly event based?
+      // Actually AuthContext listeners will update state.
+      // But we generally want to redirect.
+      // We can check role from the fetched profile?
+      // For now, let's redirect to planner default, or logic based on email is removed.
+      // Fetch user role for redirection
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
 
-      if (userRole === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/planner");
+        const role = profile?.role || 'couple';
+
+        if (role === 'admin') {
+          navigate("/admin");
+        } else if (role === 'business') {
+          navigate("/business");
+        } else {
+          navigate("/planner");
+        }
       }
-    }, 1500);
+    } catch (error) {
+      // Error handling
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function onSignUp(values: z.infer<typeof signUpSchema>) {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log("Sign up values:", values);
-
-      // Real Login with submitted data
-      login({
+    try {
+      await signUp({
         fullName: values.fullName,
         email: values.email,
         password: values.password,
@@ -112,12 +119,24 @@ const Auth = () => {
         role: values.role,
       });
 
-      if (values.role === 'business') {
-        navigate("/business");
+      // Attempt immediate login/redirect if session is active
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (values.role === 'business') {
+          navigate("/business");
+        } else {
+          navigate("/planner");
+        }
       } else {
-        navigate("/planner");
+        // Fallback if email confirmation was required (though we disabled it)
+        // or if session wasn't immediately available
+        navigate("/auth?mode=signin");
       }
-    }, 1500);
+    } catch (error) {
+      // Error handled by context
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

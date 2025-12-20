@@ -1,466 +1,691 @@
-
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from "react";
+import {
+    Users,
+    Store,
+    MapPin,
+    TrendingUp,
+    Search,
+    Filter,
+    MoreVertical,
+    Shield,
+    UserCheck,
+    Mail,
+    Loader2,
+    Plus,
+    Edit,
+    Trash2,
+    Heart,
+    Star,
+    Camera,
+    FileText,
+    Calendar,
+    ShieldCheck,
+    Check
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
-    Users, AlertCircle, Search,
-    Trash2, Edit, ShieldCheck, Star, Plus
-} from "lucide-react";
-import { toast } from "sonner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+    Card,
+    CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Type Definitions
+// --- Types (Matching DB Schema) ---
 type UserRole = 'couple' | 'business' | 'admin';
-type ContentType = 'Venue' | 'Vendor';
 
 interface AdminUser {
-    id: number;
-    name: string;
-    role: UserRole;
+    id: string;
+    full_name: string;
     email: string;
-    status: string;
+    role: UserRole;
+    status: string; // derived
 }
 
-interface AdminContent {
-    id: number;
+interface Venue {
+    id: string;
     name: string;
-    type: ContentType;
+    description: string;
+    type: string;
     location: string;
-    rating: number;
+    capacity: string;
+    capacity_num: number;
+    price: string;
+    google_rating: number;
+    google_reviews: number;
+    heart_rating: number;
+    exclusive: boolean;
+    indoor: boolean;
+    outdoor: boolean;
+    image_url: string;
+}
+
+interface Vendor {
+    id: string;
+    name: string;
+    description: string;
+    type: string;
+    location: string;
+    google_rating: number;
+    google_reviews: number;
+    heart_rating: number;
     exclusive: boolean;
 }
 
-// Initial Mock Data
-const INITIAL_USERS: AdminUser[] = [
-    { id: 1, name: "Jason M.", role: "couple", email: "jason@example.com", status: "Active" },
-    { id: 2, name: "Sarah J.", role: "business", email: "sarah@florals.com", status: "Verified" },
-    { id: 3, name: "Mike D.", role: "couple", email: "mike@test.com", status: "Active" },
-    { id: 4, name: "Vizcaya Admin", role: "business", email: "admin@vizcaya.org", status: "Verified" },
-];
+interface RealWedding {
+    id: string;
+    couple_names: string;
+    location: string;
+    style: string;
+    season: string;
+    featuring: string;
+    exclusive: boolean;
+    image_url: string;
+}
 
-const INITIAL_VENUES: AdminContent[] = [
-    { id: 1, name: "Vizcaya Museum", type: "Venue", location: "Miami", rating: 4.9, exclusive: true },
-    { id: 2, name: "The Ancient Spanish Monastery", type: "Venue", location: "North Miami", rating: 4.7, exclusive: false },
-    { id: 3, name: "Tropical Stems", type: "Vendor", location: "Miami", rating: 4.8, exclusive: false },
-];
+interface PlanningTip {
+    id: string;
+    title: string;
+    content: string;
+    tags: string[];
+    author: string;
+    read_time: string;
+    image_url: string;
+    publish: boolean; // DB might be 'published' or 'publish', using publish to match DB
+    exclusive: boolean;
+}
 
-export default function AdminDashboard() {
-    const [searchTerm, setSearchTerm] = useState("");
+type EditorType = 'vendor' | 'venue' | 'wedding' | 'tip';
 
-    // State for Lists
-    const [users, setUsers] = useState<AdminUser[]>(INITIAL_USERS);
-    const [content, setContent] = useState<AdminContent[]>(INITIAL_VENUES);
+const AdminDashboard = () => {
+    const [activeTab, setActiveTab] = useState('vendors');
+    const [loading, setLoading] = useState(true);
 
-    // State for Forms
-    const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-    const [isAddContentOpen, setIsAddContentOpen] = useState(false);
+    // Data States
+    const [users, setUsers] = useState<AdminUser[]>([]);
+    const [venues, setVenues] = useState<Venue[]>([]);
+    const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [weddings, setWeddings] = useState<RealWedding[]>([]);
+    const [tips, setTips] = useState<PlanningTip[]>([]);
 
-    // New User State
-    const [newUser, setNewUser] = useState({ name: "", email: "", role: "couple" as UserRole });
-    // New Content State
-    const [newContent, setNewContent] = useState({ name: "", type: "Venue" as ContentType, location: "" });
+    // Editor State
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editorType, setEditorType] = useState<EditorType>('vendor');
+    const [editingId, setEditingId] = useState<string | null>(null); // Null means create mode
+    const [formData, setFormData] = useState<any>({}); // Flexible state for forms
 
-    const [activeTab, setActiveTab] = useState("users");
+    const [searchQuery, setSearchQuery] = useState("");
 
-    // USER ACTIONS
-    const handleDeleteUser = (id: number) => {
-        setUsers(users.filter(u => u.id !== id));
-        toast.success(`User #${id} deleted successfully.`);
+    useEffect(() => {
+        fetchAllData();
+    }, []);
+
+    const fetchAllData = async () => {
+        setLoading(true);
+        try {
+            const [usersRes, venuesRes, vendorsRes, weddingsRes, tipsRes] = await Promise.all([
+                supabase.from('users').select('*'),
+                supabase.from('venues').select('*'),
+                supabase.from('vendors').select('*'),
+                supabase.from('real_weddings').select('*'),
+                supabase.from('planning_tips').select('*')
+            ]);
+
+            if (usersRes.data) setUsers(usersRes.data);
+            if (venuesRes.data) setVenues(venuesRes.data);
+            if (vendorsRes.data) setVendors(vendorsRes.data);
+            if (weddingsRes.data) setWeddings(weddingsRes.data);
+            if (tipsRes.data) setTips(tipsRes.data);
+
+        } catch (e) {
+            console.error("Error loading admin data", e);
+            toast.error("Failed to load dashboard data.");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleAddUser = () => {
-        if (!newUser.name || !newUser.email) return toast.error("Please fill in all fields");
-        const id = Math.max(...users.map(u => u.id)) + 1;
-        setUsers([...users, { ...newUser, id, status: "Active" }]);
-        setIsAddUserOpen(false);
-        setNewUser({ name: "", email: "", role: "couple" });
-        toast.success("User created successfully");
+    // --- Actions ---
+
+    const handleDelete = async (id: string, type: EditorType) => {
+        if (!confirm("Are you sure? This strictly deletes the record from the database.")) return;
+
+        const tableMap = {
+            'vendor': 'vendors',
+            'venue': 'venues',
+            'wedding': 'real_weddings',
+            'tip': 'planning_tips'
+        };
+
+        try {
+            const { error } = await supabase.from(tableMap[type]).delete().eq('id', id);
+            if (error) throw error;
+
+            toast.success("Deleted successfully");
+            // Optimistic update
+            if (type === 'vendor') setVendors(prev => prev.filter(i => i.id !== id));
+            if (type === 'venue') setVenues(prev => prev.filter(i => i.id !== id));
+            if (type === 'wedding') setWeddings(prev => prev.filter(i => i.id !== id));
+            if (type === 'tip') setTips(prev => prev.filter(i => i.id !== id));
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Delete failed");
+        }
     };
 
-    // CONTENT ACTIONS
-    const handleToggleExclusive = (id: number) => {
-        setContent(content.map(item =>
-            item.id === id ? { ...item, exclusive: !item.exclusive } : item
-        ));
-        toast.success(`Exclusive status updated.`);
+    const handleOpenEditor = (type: EditorType, item?: any) => {
+        setEditorType(type);
+        setEditingId(item ? item.id : null);
+
+        // Initialize form data based on type
+        if (item) {
+            setFormData({ ...item });
+        } else {
+            // Default values for new items
+            if (type === 'vendor') setFormData({ name: '', type: 'Photographer', description: '', location: '', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, image_url: '' });
+            if (type === 'venue') setFormData({ name: '', type: 'Garden', description: '', location: '', capacity: '50-300', capacity_num: 100, price: '$$$', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, indoor: true, outdoor: true, image_url: '' });
+            if (type === 'wedding') setFormData({ couple_names: '', location: '', style: 'Classic', season: 'Spring', featuring: '', exclusive: false, image_url: '' });
+            if (type === 'tip') setFormData({ title: '', category: 'Planning', content: '', image_url: '', author: '', read_time: '', tags: [], publish: true, exclusive: false });
+        }
+        setIsDialogOpen(true);
     };
 
-    const handleDeleteContent = (id: number) => {
-        setContent(content.filter(c => c.id !== id));
-        toast.success(`Item #${id} deleted successfully.`);
+    const handleSave = async () => {
+        const tableMap = {
+            'vendor': 'vendors',
+            'venue': 'venues',
+            'wedding': 'real_weddings',
+            'tip': 'planning_tips'
+        };
+
+        const table = tableMap[editorType];
+
+        try {
+            let res;
+            // Clean up formData to remove immutable fields or extra properties
+            const { id, created_at, ...cleanData } = formData;
+
+            if (editingId) {
+                // Update
+                res = await supabase.from(table).update(cleanData).eq('id', editingId).select();
+            } else {
+                // Create
+                res = await supabase.from(table).insert(cleanData).select();
+            }
+
+
+            if (res.error) throw res.error;
+
+            const savedItem = res.data[0];
+
+            // Update local state immediately
+            if (editorType === 'vendor') {
+                setVendors(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
+            } else if (editorType === 'venue') {
+                setVenues(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
+            } else if (editorType === 'wedding') {
+                setWeddings(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
+            } else if (editorType === 'tip') {
+                setTips(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
+            }
+
+            toast.success("Saved successfully!");
+            setIsDialogOpen(false);
+            fetchAllData(); // Background refresh
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Save failed");
+        }
     };
 
-    const handleAddContent = () => {
-        if (!newContent.name || !newContent.location) return toast.error("Please fill in all fields");
-        const id = Math.max(...content.map(c => c.id)) + 1;
-        setContent([...content, { ...newContent, id, rating: 5.0, exclusive: false }]);
-        setIsAddContentOpen(false);
-        setNewContent({ name: "", type: "Venue", location: "" });
-        toast.success("Content added successfully");
-    };
+    // --- Render Helpers ---
 
-    // EDIT STATE
-    const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-    const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+    const renderEditorContent = () => {
+        if (editorType === 'vendor') {
+            return (
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Name</Label><Input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Type</Label>
+                            <Select value={formData.type || 'Photographer'} onValueChange={v => setFormData({ ...formData, type: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['Photographer', 'Florist', 'DJ/Band', 'Caterer', 'Cake Designer', 'Planner', 'Hair & Makeup', 'Videographer', 'Pest Control'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Image URL (Photo)</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://example.com/photo.jpg" /></div>
+                    <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-2"><Label>Google Rating</Label><Input type="number" step="0.1" value={formData.google_rating || 0} onChange={e => setFormData({ ...formData, google_rating: parseFloat(e.target.value) })} /></div>
+                        <div className="space-y-2"><Label>Reviews</Label><Input type="number" value={formData.google_reviews || 0} onChange={e => setFormData({ ...formData, google_reviews: parseInt(e.target.value) })} /></div>
+                        <div className="space-y-2"><Label>Heart Rating</Label><Input type="number" step="0.1" value={formData.heart_rating || 0} onChange={e => setFormData({ ...formData, heart_rating: parseFloat(e.target.value) })} /></div>
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                        <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
+                        <Label htmlFor="exclusive">Exclusive Vendor?</Label>
+                    </div>
+                </div>
+            )
+        }
+        if (editorType === 'venue') {
+            return (
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Name</Label><Input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Type</Label>
+                            <Select value={formData.type || 'Ballroom'} onValueChange={v => setFormData({ ...formData, type: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['Ballroom', 'Garden & Estate', 'Rustic Barn', 'Waterfront', 'Historic', 'Mountain', 'Loft/Industrial', 'Winery'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Image URL</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." /></div>
+                    <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
 
-    const [editingContent, setEditingContent] = useState<AdminContent | null>(null);
-    const [isEditContentOpen, setIsEditContentOpen] = useState(false);
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Capacity (Text)</Label><Input value={formData.capacity || ''} onChange={e => setFormData({ ...formData, capacity: e.target.value })} placeholder="e.g. 50-300" /></div>
+                        <div className="space-y-2"><Label>Max Capacity (Num)</Label><Input type="number" value={formData.capacity_num || 0} onChange={e => setFormData({ ...formData, capacity_num: parseInt(e.target.value) })} /></div>
+                    </div>
 
-    // EDIT HANDLERS (USER)
-    const openEditUser = (user: AdminUser) => {
-        setEditingUser(user);
-        setIsEditUserOpen(true);
-    };
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Price Range</Label>
+                            <Select value={formData.price || '$$$'} onValueChange={v => setFormData({ ...formData, price: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['$', '$$', '$$$', '$$$$'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
 
-    const handleUpdateUser = () => {
-        if (!editingUser) return;
-        setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));
-        setIsEditUserOpen(false);
-        setEditingUser(null);
-        toast.success("User updated successfully");
-    };
+                    <div className="flex gap-6 py-2">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="indoor" checked={formData.indoor || false} onCheckedChange={c => setFormData({ ...formData, indoor: c })} />
+                            <Label htmlFor="indoor">Indoor</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="outdoor" checked={formData.outdoor || false} onCheckedChange={c => setFormData({ ...formData, outdoor: c })} />
+                            <Label htmlFor="outdoor">Outdoor</Label>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Guests</Label><Input type="number" value={formData.guests || 0} onChange={e => setFormData({ ...formData, guests: parseInt(e.target.value) })} /></div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-2"><Label>Google Rating</Label><Input type="number" step="0.1" value={formData.google_rating || 0} onChange={e => setFormData({ ...formData, google_rating: parseFloat(e.target.value) })} /></div>
+                        <div className="space-y-2"><Label>Reviews</Label><Input type="number" value={formData.google_reviews || 0} onChange={e => setFormData({ ...formData, google_reviews: parseInt(e.target.value) })} /></div>
+                        <div className="space-y-2"><Label>Heart Rating</Label><Input type="number" step="0.1" value={formData.heart_rating || 0} onChange={e => setFormData({ ...formData, heart_rating: parseFloat(e.target.value) })} /></div>
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                        <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
+                        <Label htmlFor="exclusive">Exclusive Venue?</Label>
+                    </div>
+                </div>
+            )
+        }
+        if (editorType === 'wedding') {
+            return (
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2"><Label>Couple Names</Label><Input value={formData.couple_names || ''} onChange={e => setFormData({ ...formData, couple_names: e.target.value })} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Style</Label>
+                            <Select value={formData.style || 'Classic'} onValueChange={v => setFormData({ ...formData, style: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {[
+                                        'Minimalist', 'Boho', 'Classic', 'Moody', 'Whimsical', // From Style Matcher
+                                        'Garden Romance', 'Classic Elegance', 'Rustic Chic', 'Destination Beach', 'Southern Charm' // Existing Real Weddings
+                                    ].sort().map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2"><Label>Season</Label><Input value={formData.season || ''} onChange={e => setFormData({ ...formData, season: e.target.value })} /></div>
+                    </div>
+                    <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Image URL (Photo)</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." /></div>
+                    <div className="space-y-2"><Label>Featuring (Vendor)</Label><Input value={formData.featuring || ''} onChange={e => setFormData({ ...formData, featuring: e.target.value })} /></div>
+                    <div className="flex items-center space-x-2 pt-2">
+                        <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
+                        <Label htmlFor="exclusive">Exclusive Wedding?</Label>
+                    </div>
+                </div>
+            );
+        }
+        if (editorType === 'tip') {
+            return (
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2"><Label>Title</Label><Input value={formData.title || ''} onChange={e => setFormData({ ...formData, title: e.target.value })} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Category</Label>
+                            <Select value={formData.category || 'Planning'} onValueChange={v => setFormData({ ...formData, category: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['Planning', 'Budget', 'Vendors', 'Decor', 'Fashion', 'Etiquette'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2"><Label>Author</Label><Input value={formData.author || ''} onChange={e => setFormData({ ...formData, author: e.target.value })} /></div>
+                    </div>
+                    <div className="space-y-2"><Label>Image URL</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." /></div>
+                    <div className="space-y-2"><Label>Content</Label><Textarea className="min-h-[150px]" value={formData.content || ''} onChange={e => setFormData({ ...formData, content: e.target.value })} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Read Time</Label><Input value={formData.read_time || ''} onChange={e => setFormData({ ...formData, read_time: e.target.value })} placeholder="e.g. 5 min read" /></div>
+                        <div className="space-y-2"><Label>Tags (comma separated)</Label><Input value={Array.isArray(formData.tags) ? formData.tags.join(', ') : (formData.tags || '')} onChange={e => setFormData({ ...formData, tags: e.target.value.split(',').map((t: string) => t.trim()) })} /></div>
+                    </div>
+                    <div className="flex items-center gap-6 pt-2">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="publish" checked={formData.publish || false} onCheckedChange={c => setFormData({ ...formData, publish: c })} />
+                            <Label htmlFor="publish">Published</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
+                            <Label htmlFor="exclusive">Exclusive?</Label>
+                        </div>
+                    </div>
+                </div>
+            )
+        }
+    }
 
-    // EDIT HANDLERS (CONTENT)
-    const openEditContent = (item: AdminContent) => {
-        setEditingContent(item);
-        setIsEditContentOpen(true);
-    };
-
-    const handleUpdateContent = () => {
-        if (!editingContent) return;
-        setContent(content.map(c => c.id === editingContent.id ? editingContent : c));
-        setIsEditContentOpen(false);
-        setEditingContent(null);
-        toast.success("Content updated successfully");
-    };
-
-    // DASHBOARD ACTIONS
-    const handleStatClick = (tab: string, search: string = "") => {
-        setActiveTab(tab);
-        setSearchTerm(search);
-    };
+    if (loading) {
+        return (
+            <div className="p-8 flex flex-col items-center justify-center min-h-[50vh] text-rose-500">
+                <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                <span className="text-muted-foreground font-serif">Loading Admin Dashboard...</span>
+            </div>
+        );
+    }
 
     return (
-        <div className="container mx-auto px-4 py-8 mt-16 max-w-7xl min-h-[calc(100vh-100px)] flex flex-col">
+        <div className="container mx-auto px-4 py-8 mt-16 max-w-7xl min-h-[calc(100vh-100px)] flex flex-col animate-fade-in">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-3">
-                        <ShieldCheck className="w-8 h-8 text-purple-600" />
+                    <h1 className="text-3xl font-bold flex items-center gap-3 font-serif">
+                        <ShieldCheck className="w-8 h-8 text-rose-gold" />
                         Admin Command Center
                     </h1>
-                    <p className="text-muted-foreground">Manage users, content, and exclusive drops.</p>
+                    <p className="text-muted-foreground mt-1">Manage platform data, users, and exclusives.</p>
                 </div>
                 <div className="flex gap-4">
-                    <Button variant="outline">Export Reports</Button>
+                    <Button variant="outline" onClick={fetchAllData}>Refresh Data</Button>
                 </div>
-            </div>
-
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleStatClick("users", "")}
-                >
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle></CardHeader>
-                    <CardContent><div className="text-2xl font-bold">{users.length}</div></CardContent>
-                </Card>
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleStatClick("users", "business")}
-                >
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Active Vendors</CardTitle></CardHeader>
-                    <CardContent><div className="text-2xl font-bold">{users.filter(u => u.role === 'business').length}</div></CardContent>
-                </Card>
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleStatClick("content")}
-                >
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Content Items</CardTitle></CardHeader>
-                    <CardContent><div className="text-2xl font-bold">{content.length}</div></CardContent>
-                </Card>
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleStatClick("users", "Pending")} // Mocking a status filter by search
-                >
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pending Verifications</CardTitle></CardHeader>
-                    <CardContent><div className="text-2xl font-bold text-orange-500 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> 12</div></CardContent>
-                </Card>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="w-full max-w-md mb-4 bg-slate-100">
-                    <TabsTrigger value="users">User Management</TabsTrigger>
-                    <TabsTrigger value="content">Content & Exclusives</TabsTrigger>
-                    <TabsTrigger value="settings">System Settings</TabsTrigger>
+                <TabsList className="w-full justify-start mb-6 overflow-x-auto bg-slate-100 p-1">
+                    <TabsTrigger value="vendors">Vendors</TabsTrigger>
+                    <TabsTrigger value="venues">Venues</TabsTrigger>
+                    <TabsTrigger value="weddings">Real Weddings</TabsTrigger>
+                    <TabsTrigger value="tips">Planning Tips</TabsTrigger>
+                    <TabsTrigger value="users">Users</TabsTrigger>
                 </TabsList>
 
-                {/* USERS TAB */}
-                <TabsContent value="users" className="flex-1 bg-white rounded-lg border shadow-sm p-0 overflow-hidden">
-                    <div className="p-4 border-b flex justify-between items-center gap-4">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search users..."
-                                className="pl-8"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
-                                    <Plus className="w-4 h-4" /> Add User
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Create New User</DialogTitle>
-                                    <DialogDescription>Add a new user to the platform manually.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label>Full Name</Label>
-                                        <Input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Email</Label>
-                                        <Input value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Role</Label>
-                                        <Select value={newUser.role} onValueChange={(v: UserRole) => setNewUser({ ...newUser, role: v })}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="couple">Couple</SelectItem>
-                                                <SelectItem value="business">Business</SelectItem>
-                                                <SelectItem value="admin">Admin</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button onClick={handleAddUser}>Create User</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                {/* --- DIALOG --- */}
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>{editingId ? 'Edit' : 'Add New'} {editorType.charAt(0).toUpperCase() + editorType.slice(1)}</DialogTitle>
+                            <DialogDescription>Make changes to the database record here. Click save when done.</DialogDescription>
+                        </DialogHeader>
+                        {renderEditorContent()}
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                            <Button className="bg-rose-gold hover:bg-rose-600" onClick={handleSave}>Save Changes</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
-                        {/* EDIT USER DIALOG */}
-                        <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Edit User</DialogTitle>
-                                </DialogHeader>
-                                {editingUser && (
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label>Full Name</Label>
-                                            <Input value={editingUser.name} onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Email</Label>
-                                            <Input value={editingUser.email} onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Role</Label>
-                                            <Select value={editingUser.role} onValueChange={(v: UserRole) => setEditingUser({ ...editingUser, role: v })}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="couple">Couple</SelectItem>
-                                                    <SelectItem value="business">Business</SelectItem>
-                                                    <SelectItem value="admin">Admin</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Status</Label>
-                                            <Select value={editingUser.status} onValueChange={(v) => setEditingUser({ ...editingUser, status: v })}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Active">Active</SelectItem>
-                                                    <SelectItem value="Verified">Verified</SelectItem>
-                                                    <SelectItem value="Suspended">Suspended</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                )}
-                                <DialogFooter>
-                                    <Button onClick={handleUpdateUser}>Save Changes</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                {/* --- VENDORS TAB --- */}
+                <TabsContent value="vendors">
+                    <div className="flex justify-end mb-4">
+                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('vendor')}><Plus className="w-4 h-4" /> Add Vendor</Button>
                     </div>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[300px]">User</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {users.filter(u =>
-                                u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                u.role.toLowerCase().includes(searchTerm.toLowerCase())
-                            ).map((user) => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-8 w-8"><AvatarFallback>{user.name.charAt(0)}</AvatarFallback></Avatar>
-                                            <div>
-                                                <div className="text-sm font-bold">{user.name}</div>
-                                                <div className="text-xs text-muted-foreground">{user.email}</div>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={user.role === 'business' ? 'secondary' : 'outline'} className="capitalize">
-                                            {user.role}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${user.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                                            {user.status}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-slate-900" onClick={() => openEditUser(user)}><Edit className="w-4 h-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteUser(user.id)}><Trash2 className="w-4 h-4" /></Button>
-                                        </div>
-                                    </TableCell>
+                    <Card><div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[100px]">ID</TableHead>
+                                    <TableHead>Vendor Name</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Google Rating</TableHead>
+                                    <TableHead>Heart Rating</TableHead>
+                                    <TableHead>Exclusive</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {vendors.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center p-4">No Vendors Found</TableCell></TableRow> :
+                                    vendors.map((v) => (
+                                        <TableRow key={v.id}>
+                                            <TableCell className="font-mono text-xs text-muted-foreground">{v.id.slice(0, 8)}...</TableCell>
+                                            <TableCell className="font-medium">{v.name}</TableCell>
+                                            <TableCell><Badge variant="outline">{v.type}</Badge></TableCell>
+                                            <TableCell>{v.location}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                                    {v.google_rating} <span className="text-xs text-muted-foreground">({v.google_reviews})</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+                                                    {v.heart_rating}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{v.exclusive ? <Badge className="bg-rose-100 text-rose-600">Yes</Badge> : "No"}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('vendor', v)}><Edit className="w-4 h-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(v.id, 'vendor')}><Trash2 className="w-4 h-4" /></Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </div></Card>
                 </TabsContent>
 
-                {/* CONTENT TAB */}
-                <TabsContent value="content" className="flex-1 bg-white rounded-lg border shadow-sm p-4">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Venues & Vendors Database</h3>
-                        <Dialog open={isAddContentOpen} onOpenChange={setIsAddContentOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
-                                    <Plus className="w-4 h-4" /> Add Content
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Content</DialogTitle>
-                                    <DialogDescription>Add a new Venue or Vendor to the directory.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label>Name</Label>
-                                        <Input value={newContent.name} onChange={(e) => setNewContent({ ...newContent, name: e.target.value })} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Type</Label>
-                                        <Select value={newContent.type} onValueChange={(v: ContentType) => setNewContent({ ...newContent, type: v })}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Venue">Venue</SelectItem>
-                                                <SelectItem value="Vendor">Vendor</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Location</Label>
-                                        <Input value={newContent.location} onChange={(e) => setNewContent({ ...newContent, location: e.target.value })} />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button onClick={handleAddContent}>Add Item</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        {/* EDIT CONTENT DIALOG */}
-                        <Dialog open={isEditContentOpen} onOpenChange={setIsEditContentOpen}>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Edit Content</DialogTitle>
-                                </DialogHeader>
-                                {editingContent && (
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label>Name</Label>
-                                            <Input value={editingContent.name} onChange={(e) => setEditingContent({ ...editingContent, name: e.target.value })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Type</Label>
-                                            <Select value={editingContent.type} onValueChange={(v: ContentType) => setEditingContent({ ...editingContent, type: v })}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Venue">Venue</SelectItem>
-                                                    <SelectItem value="Vendor">Vendor</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Location</Label>
-                                            <Input value={editingContent.location} onChange={(e) => setEditingContent({ ...editingContent, location: e.target.value })} />
-                                        </div>
-                                    </div>
-                                )}
-                                <DialogFooter>
-                                    <Button onClick={handleUpdateContent}>Save Changes</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                {/* --- VENUES TAB --- */}
+                <TabsContent value="venues">
+                    <div className="flex justify-end mb-4">
+                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('venue')}><Plus className="w-4 h-4" /> Add Venue</Button>
                     </div>
-
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Content Name</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Location</TableHead>
-                                <TableHead>Rating</TableHead>
-                                <TableHead>Exclusive?</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {content.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-bold">{item.name}</TableCell>
-                                    <TableCell>{item.type}</TableCell>
-                                    <TableCell>{item.location}</TableCell>
-                                    <TableCell>⭐ {item.rating}</TableCell>
-                                    <TableCell>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className={item.exclusive ? "text-yellow-600 bg-yellow-50" : "text-muted-foreground"}
-                                            onClick={() => handleToggleExclusive(item.id)}
-                                        >
-                                            <Star className={`w-4 h-4 mr-1 ${item.exclusive ? "fill-yellow-600" : ""}`} />
-                                            {item.exclusive ? "Exclusive" : "Standard"}
-                                        </Button>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-slate-900" onClick={() => openEditContent(item)}><Edit className="w-4 h-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteContent(item.id)}><Trash2 className="w-4 h-4" /></Button>
-                                        </div>
-                                    </TableCell>
+                    <Card><div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Venue Name</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Guests</TableHead>
+                                    <TableHead>Google Rating</TableHead>
+                                    <TableHead>Heart Rating</TableHead>
+                                    <TableHead>Exclusive</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {venues.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center p-4">No Venues Found</TableCell></TableRow> :
+                                    venues.map((v) => (
+                                        <TableRow key={v.id}>
+                                            <TableCell className="font-medium">{v.name}</TableCell>
+                                            <TableCell><Badge variant="outline">{v.type}</Badge></TableCell>
+                                            <TableCell>{v.location}</TableCell>
+                                            <TableCell>{v.capacity}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                                    {v.google_rating} <span className="text-xs text-muted-foreground">({v.google_reviews})</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+                                                    {v.heart_rating}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{v.exclusive ? <Badge className="bg-rose-100 text-rose-600">Yes</Badge> : "No"}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('venue', v)}><Edit className="w-4 h-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(v.id, 'venue')}><Trash2 className="w-4 h-4" /></Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </div></Card>
+                </TabsContent>
+
+                {/* --- WEDDINGS TAB --- */}
+                <TabsContent value="weddings">
+                    <div className="flex justify-end mb-4">
+                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('wedding')}><Plus className="w-4 h-4" /> Add Wedding</Button>
+                    </div>
+                    <Card><div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Couple Name</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Style</TableHead>
+                                    <TableHead>Season</TableHead>
+                                    <TableHead>Featuring</TableHead>
+                                    <TableHead>Exclusive</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {weddings.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center p-4">No Weddings Found</TableCell></TableRow> :
+                                    weddings.map((w) => (
+                                        <TableRow key={w.id}>
+                                            <TableCell className="font-medium">{w.couple_names}</TableCell>
+                                            <TableCell>{w.location}</TableCell>
+                                            <TableCell><Badge variant="secondary">{w.style}</Badge></TableCell>
+                                            <TableCell>{w.season}</TableCell>
+                                            <TableCell>{w.featuring}</TableCell>
+                                            <TableCell>{w.exclusive ? <Badge className="bg-rose-100 text-rose-600">Yes</Badge> : "No"}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('wedding', w)}><Edit className="w-4 h-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(w.id, 'wedding')}><Trash2 className="w-4 h-4" /></Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </div></Card>
+                </TabsContent>
+
+                {/* --- TIPS TAB --- */}
+                <TabsContent value="tips">
+                    <div className="flex justify-end mb-4">
+                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('tip')}><Plus className="w-4 h-4" /> Add Tip</Button>
+                    </div>
+                    <Card><div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Preview</TableHead>
+                                    <TableHead>Tags</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Exclusive</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {tips.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center p-4">No Tips Found</TableCell></TableRow> :
+                                    tips.map((t) => (
+                                        <TableRow key={t.id}>
+                                            <TableCell className="font-medium">{t.title}</TableCell>
+                                            <TableCell className="max-w-xs truncate text-muted-foreground">{t.content}</TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {t.tags && t.tags.length > 0 ? t.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>) : '-'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{t.publish ? <span className="text-green-600 font-bold text-xs uppercase">Published</span> : <span className="text-slate-400 text-xs uppercase">Draft</span>}</TableCell>
+                                            <TableCell>{t.exclusive ? <Badge className="bg-rose-100 text-rose-600">Yes</Badge> : "No"}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('tip', t)}><Edit className="w-4 h-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(t.id, 'tip')}><Trash2 className="w-4 h-4" /></Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </div></Card>
+                </TabsContent>
+
+                {/* --- USERS TAB --- */}
+                <TabsContent value="users">
+                    <Card><div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {users.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center p-4">No Users</TableCell></TableRow> :
+                                    users.map((u) => (
+                                        <TableRow key={u.id}>
+                                            <TableCell className="font-medium flex items-center gap-2">
+                                                <Avatar className="w-6 h-6"><AvatarFallback>{u.full_name ? u.full_name[0] : 'U'}</AvatarFallback></Avatar>
+                                                {u.full_name}
+                                            </TableCell>
+                                            <TableCell><Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>{u.role}</Badge></TableCell>
+                                            <TableCell>{u.email}</TableCell>
+                                            <TableCell><span className="text-green-600 text-xs font-bold uppercase">Active</span></TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    </div></Card>
                 </TabsContent>
             </Tabs>
         </div>
     );
-}
+};
+
+export default AdminDashboard;
+

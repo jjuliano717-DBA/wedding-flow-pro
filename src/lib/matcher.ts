@@ -80,7 +80,7 @@ export function getCompositeRankedVendors(vendors: Vendor[], user: User): Compos
     return vendors.map(vendor => {
         // 1. Style Score (0-1)
         const styleScore = user.stylePreferences
-            ? calculateSimilarity(user.stylePreferences, vendor.styleVector)
+            ? calculateSimilarity(user.stylePreferences || {}, vendor.styleVector)
             : 0;
 
         // 2. Budget Score (0-1)

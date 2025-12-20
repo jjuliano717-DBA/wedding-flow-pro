@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Star, MapPin, Filter, X, Heart, Camera, Flower2, Music, UtensilsCrossed, Cake, Sparkles, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,166 +21,72 @@ const categoryIcons: Record<string, React.ElementType> = {
   "Videographer": Video,
 };
 
-const allVendors = [
-  {
-    id: 1,
-    name: "Simply Sunshine Events",
-    image: wedding1,
-    category: "Planner",
-    location: "Los Angeles, CA",
-    rating: 4.9,
-    reviews: 127,
-    priceRange: "$$$$",
-    featured: true,
-  },
-  {
-    id: 2,
-    name: "The Grovers Photography",
-    image: wedding2,
-    category: "Photographer",
-    location: "San Francisco, CA",
-    rating: 5.0,
-    reviews: 89,
-    priceRange: "$$$",
-    featured: true,
-  },
-  {
-    id: 3,
-    name: "Bloomington Florals",
-    image: wedding3,
-    category: "Florist",
-    location: "New York, NY",
-    rating: 4.8,
-    reviews: 156,
-    priceRange: "$$",
-    featured: false,
-  },
-  {
-    id: 4,
-    name: "DJ Smooth Beats",
-    image: wedding4,
-    category: "DJ/Band",
-    location: "Miami, FL",
-    rating: 4.7,
-    reviews: 78,
-    priceRange: "$$",
-    featured: false,
-  },
-  {
-    id: 5,
-    name: "Gourmet Catering Co",
-    image: wedding1,
-    category: "Caterer",
-    location: "Chicago, IL",
-    rating: 4.9,
-    reviews: 201,
-    priceRange: "$$$$",
-    featured: true,
-  },
-  {
-    id: 6,
-    name: "Sweet Dreams Bakery",
-    image: wedding2,
-    category: "Cake Designer",
-    location: "Nashville, TN",
-    rating: 4.8,
-    reviews: 94,
-    priceRange: "$$$",
-    featured: false,
-  },
-  {
-    id: 7,
-    name: "Glamour Squad",
-    image: wedding3,
-    category: "Hair & Makeup",
-    location: "Austin, TX",
-    rating: 4.9,
-    reviews: 167,
-    priceRange: "$$$",
-    featured: true,
-  },
-  {
-    id: 8,
-    name: "Cinema Love Films",
-    image: wedding4,
-    category: "Videographer",
-    location: "Seattle, WA",
-    rating: 5.0,
-    reviews: 54,
-    priceRange: "$$$$",
-    featured: false,
-  },
-  {
-    id: 9,
-    name: "Valley & Company Events",
-    image: wedding1,
-    category: "Planner",
-    location: "Denver, CO",
-    rating: 4.8,
-    reviews: 112,
-    priceRange: "$$$",
-    featured: false,
-  },
-  {
-    id: 10,
-    name: "Heather Durham Photography",
-    image: wedding2,
-    category: "Photographer",
-    location: "Atlanta, GA",
-    rating: 4.9,
-    reviews: 198,
-    priceRange: "$$$$",
-    featured: true,
-  },
-  {
-    id: 11,
-    name: "Garden of Eden Florals",
-    image: wedding3,
-    category: "Florist",
-    location: "Portland, OR",
-    rating: 4.7,
-    reviews: 76,
-    priceRange: "$$",
-    featured: false,
-  },
-  {
-    id: 12,
-    name: "The Harmony Band",
-    image: wedding4,
-    category: "DJ/Band",
-    location: "Boston, MA",
-    rating: 4.9,
-    reviews: 145,
-    priceRange: "$$$$",
-    featured: true,
-  },
-];
+import { supabase } from "@/lib/supabase"; // Ensure this import is added
+// ... imports
+
+// Default fallback image if none provided
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
 
 const categories = ["All Categories", "Photographer", "Florist", "DJ/Band", "Caterer", "Cake Designer", "Planner", "Hair & Makeup", "Videographer"];
 const locationsList = ["All Locations", "California", "New York", "Florida", "Illinois", "Tennessee", "Texas", "Washington", "Colorado", "Georgia", "Oregon", "Massachusetts"];
 const priceRanges = ["All Prices", "$", "$$", "$$$", "$$$$"];
 
 const VendorsDirectory = () => {
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [selectedLocation, setSelectedLocation] = useState("All Locations");
   const [selectedPrice, setSelectedPrice] = useState("All Prices");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Fetch Vendors from Supabase
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('vendors')
+          .select('*')
+          .eq('exclusive', true); // Only fetch exclusive vendors as requested
+
+        if (error) throw error;
+        setVendors(data || []);
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVendors();
+  }, []);
+
   const filteredVendors = useMemo(() => {
-    return allVendors.filter((vendor) => {
+    return vendors.filter((vendor) => {
       const matchesSearch =
         vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        vendor.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        vendor.category.toLowerCase().includes(searchQuery.toLowerCase());
+        (vendor.location && vendor.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (vendor.category && vendor.category.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesCategory = selectedCategory === "All Categories" || vendor.category === selectedCategory;
-      const matchesLocation = selectedLocation === "All Locations" || vendor.location.includes(selectedLocation);
-      const matchesPrice = selectedPrice === "All Prices" || vendor.priceRange === selectedPrice;
+      const matchesCategory = selectedCategory === "All Categories" || vendor.category === selectedCategory || vendor.type === selectedCategory;
+      const matchesLocation = selectedLocation === "All Locations" || (vendor.location && vendor.location.includes(selectedLocation));
+      // Price range not currently in DB, ignoring for now or mapping if added later
+      const matchesPrice = selectedPrice === "All Prices";
 
       return matchesSearch && matchesCategory && matchesLocation && matchesPrice;
     });
-  }, [searchQuery, selectedCategory, selectedLocation, selectedPrice]);
+  }, [vendors, searchQuery, selectedCategory, selectedLocation, selectedPrice]);
+
+  // Transform DB data to UI format inside the map
+  const displayVendors = filteredVendors.map(v => ({
+    ...v,
+    category: v.category || v.type || 'Other',
+    image: v.image_url || DEFAULT_IMAGE,
+    rating: v.google_rating || 0,
+    reviews: v.google_reviews || 0,
+    priceRange: "$$" // Default for now
+  }));
+
 
   const clearFilters = () => {
     setSelectedCategory("All Categories");
@@ -194,7 +100,7 @@ const VendorsDirectory = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Hero Section */}
       <section className="pt-24 pb-12 md:pt-32 md:pb-16 bg-romantic">
         <div className="container mx-auto px-4">
@@ -237,11 +143,10 @@ const VendorsDirectory = () => {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(isActive ? "All Categories" : category)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border hover:border-primary/50"
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card border border-border hover:border-primary/50"
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-sm font-medium">{category}</span>
@@ -298,7 +203,7 @@ const VendorsDirectory = () => {
             )}
 
             <span className="ml-auto text-sm text-muted-foreground">
-              {filteredVendors.length} vendors found
+              {displayVendors.length} vendors found
             </span>
           </div>
         </div>
@@ -319,7 +224,7 @@ const VendorsDirectory = () => {
             }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
-            {filteredVendors.map((vendor) => {
+            {displayVendors.map((vendor) => {
               const CategoryIcon = categoryIcons[vendor.category] || Sparkles;
               return (
                 <motion.article
@@ -370,7 +275,7 @@ const VendorsDirectory = () => {
                           {vendor.priceRange}
                         </span>
                       </div>
-                      
+
                       <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-3">
                         <MapPin className="w-4 h-4" />
                         {vendor.location}
@@ -390,7 +295,7 @@ const VendorsDirectory = () => {
             })}
           </motion.div>
 
-          {filteredVendors.length === 0 && (
+          {displayVendors.length === 0 && (
             <div className="text-center py-16">
               <p className="text-muted-foreground text-lg mb-4">No vendors found matching your criteria.</p>
               <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
@@ -399,7 +304,7 @@ const VendorsDirectory = () => {
         </div>
       </section>
 
-      <Footer />
+
     </div>
   );
 };

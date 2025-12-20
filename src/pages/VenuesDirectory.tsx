@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Star, MapPin, Users, Filter, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,176 +10,10 @@ import wedding2 from "@/assets/wedding-2.jpg";
 import wedding3 from "@/assets/wedding-3.jpg";
 import wedding4 from "@/assets/wedding-4.jpg";
 
-const allVenues = [
-  {
-    id: 1,
-    name: "The Grand Estate",
-    image: wedding1,
-    location: "Napa Valley, CA",
-    type: "Garden & Estate",
-    capacity: "50-300",
-    capacityNum: 300,
-    rating: 4.9,
-    reviews: 127,
-    price: "$$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 2,
-    name: "Rosewood Ballroom",
-    image: wedding2,
-    location: "New York, NY",
-    type: "Ballroom",
-    capacity: "100-500",
-    capacityNum: 500,
-    rating: 4.8,
-    reviews: 89,
-    price: "$$$$",
-    indoor: true,
-    outdoor: false,
-  },
-  {
-    id: 3,
-    name: "Harvest Moon Barn",
-    image: wedding3,
-    location: "Nashville, TN",
-    type: "Rustic Barn",
-    capacity: "75-250",
-    capacityNum: 250,
-    rating: 4.9,
-    reviews: 156,
-    price: "$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 4,
-    name: "Sunset Beach Resort",
-    image: wedding4,
-    location: "Malibu, CA",
-    type: "Waterfront",
-    capacity: "50-200",
-    capacityNum: 200,
-    rating: 5.0,
-    reviews: 78,
-    price: "$$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 5,
-    name: "The Historic Manor",
-    image: wedding1,
-    location: "Charleston, SC",
-    type: "Historic",
-    capacity: "100-350",
-    capacityNum: 350,
-    rating: 4.7,
-    reviews: 201,
-    price: "$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 6,
-    name: "Mountain View Lodge",
-    image: wedding2,
-    location: "Aspen, CO",
-    type: "Mountain",
-    capacity: "50-150",
-    capacityNum: 150,
-    rating: 4.9,
-    reviews: 94,
-    price: "$$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 7,
-    name: "Urban Loft Gallery",
-    image: wedding3,
-    location: "Chicago, IL",
-    type: "Loft/Industrial",
-    capacity: "75-200",
-    capacityNum: 200,
-    rating: 4.8,
-    reviews: 167,
-    price: "$$",
-    indoor: true,
-    outdoor: false,
-  },
-  {
-    id: 8,
-    name: "Vineyard Vista",
-    image: wedding4,
-    location: "Sonoma, CA",
-    type: "Winery",
-    capacity: "100-300",
-    capacityNum: 300,
-    rating: 4.9,
-    reviews: 54,
-    price: "$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 9,
-    name: "Garden Terrace",
-    image: wedding1,
-    location: "Austin, TX",
-    type: "Garden & Estate",
-    capacity: "50-175",
-    capacityNum: 175,
-    rating: 4.6,
-    reviews: 112,
-    price: "$$",
-    indoor: false,
-    outdoor: true,
-  },
-  {
-    id: 10,
-    name: "The Crystal Palace",
-    image: wedding2,
-    location: "Miami, FL",
-    type: "Ballroom",
-    capacity: "150-600",
-    capacityNum: 600,
-    rating: 4.8,
-    reviews: 198,
-    price: "$$$$",
-    indoor: true,
-    outdoor: false,
-  },
-  {
-    id: 11,
-    name: "Lakeside Retreat",
-    image: wedding3,
-    location: "Lake Tahoe, CA",
-    type: "Waterfront",
-    capacity: "75-250",
-    capacityNum: 250,
-    rating: 4.9,
-    reviews: 76,
-    price: "$$$",
-    indoor: true,
-    outdoor: true,
-  },
-  {
-    id: 12,
-    name: "The Old Mill",
-    image: wedding4,
-    location: "Portland, OR",
-    type: "Rustic Barn",
-    capacity: "50-180",
-    capacityNum: 180,
-    rating: 4.7,
-    reviews: 145,
-    price: "$$",
-    indoor: true,
-    outdoor: true,
-  },
-];
+import { supabase } from "@/lib/supabase"; // Ensure import
+
+// Default fallback image if none provided
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
 
 const venueTypes = ["All Types", "Ballroom", "Garden & Estate", "Rustic Barn", "Waterfront", "Historic", "Mountain", "Loft/Industrial", "Winery"];
 const locationsList = ["All Locations", "California", "New York", "Tennessee", "South Carolina", "Colorado", "Illinois", "Texas", "Florida", "Oregon"];
@@ -187,6 +21,9 @@ const capacities = ["Any Capacity", "Up to 100", "100-200", "200-300", "300+"];
 const priceRanges = ["All Prices", "$$", "$$$", "$$$$"];
 
 const VenuesDirectory = () => {
+  const [venues, setVenues] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("All Types");
   const [selectedLocation, setSelectedLocation] = useState("All Locations");
@@ -194,26 +31,56 @@ const VenuesDirectory = () => {
   const [selectedPrice, setSelectedPrice] = useState("All Prices");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Fetch Venues from Supabase
+  useEffect(() => {
+    const fetchVenues = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('venues')
+          .select('*')
+          //.eq('exclusive', true); // Assuming we want all venues or exclusive? User said "do the same workflow... entries in localhost:8082/venues to venues tab in admin". The sql inserted them as exclusive=true. So let's fetch exclusive ones or all? Directory usually shows all approved. But let's stick to exclusive=true for consistency with "same workflow".
+          .eq('exclusive', true);
+
+        if (error) throw error;
+        setVenues(data || []);
+      } catch (error) {
+        console.error("Error fetching venues:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVenues();
+  }, []);
+
   const filteredVenues = useMemo(() => {
-    return allVenues.filter((venue) => {
+    return venues.filter((venue) => {
       const matchesSearch =
         venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venue.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venue.type.toLowerCase().includes(searchQuery.toLowerCase());
+        (venue.location && venue.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (venue.type && venue.type.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesType = selectedType === "All Types" || venue.type === selectedType;
-      const matchesLocation = selectedLocation === "All Locations" || venue.location.includes(selectedLocation);
+      const matchesLocation = selectedLocation === "All Locations" || (venue.location && venue.location.includes(selectedLocation));
       const matchesPrice = selectedPrice === "All Prices" || venue.price === selectedPrice;
-      
+
       let matchesCapacity = true;
-      if (selectedCapacity === "Up to 100") matchesCapacity = venue.capacityNum <= 100;
-      else if (selectedCapacity === "100-200") matchesCapacity = venue.capacityNum > 100 && venue.capacityNum <= 200;
-      else if (selectedCapacity === "200-300") matchesCapacity = venue.capacityNum > 200 && venue.capacityNum <= 300;
-      else if (selectedCapacity === "300+") matchesCapacity = venue.capacityNum > 300;
+      if (selectedCapacity === "Up to 100") matchesCapacity = venue.capacity_num <= 100;
+      else if (selectedCapacity === "100-200") matchesCapacity = venue.capacity_num > 100 && venue.capacity_num <= 200;
+      else if (selectedCapacity === "200-300") matchesCapacity = venue.capacity_num > 200 && venue.capacity_num <= 300;
+      else if (selectedCapacity === "300+") matchesCapacity = venue.capacity_num > 300;
 
       return matchesSearch && matchesType && matchesLocation && matchesCapacity && matchesPrice;
     });
-  }, [searchQuery, selectedType, selectedLocation, selectedCapacity, selectedPrice]);
+  }, [venues, searchQuery, selectedType, selectedLocation, selectedCapacity, selectedPrice]);
+
+  const displayVenues = filteredVenues.map(v => ({
+    ...v,
+    image: v.image_url || DEFAULT_IMAGE,
+    rating: v.google_rating || 0,
+    reviews: v.google_reviews || 0,
+    capacity: v.capacity || 'N/A', // Display string
+    capacityNum: v.capacity_num || 0
+  }));
 
   const clearFilters = () => {
     setSelectedType("All Types");
@@ -228,7 +95,7 @@ const VenuesDirectory = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Hero Section */}
       <section className="pt-24 pb-12 md:pt-32 md:pb-16 bg-romantic">
         <div className="container mx-auto px-4">
@@ -270,11 +137,10 @@ const VenuesDirectory = () => {
                 <button
                   key={type}
                   onClick={() => setSelectedType(isActive ? "All Types" : type)}
-                  className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border hover:border-primary/50"
-                  }`}
+                  className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card border border-border hover:border-primary/50"
+                    }`}
                 >
                   {type}
                 </button>
@@ -340,7 +206,7 @@ const VenuesDirectory = () => {
             )}
 
             <span className="ml-auto text-sm text-muted-foreground">
-              {filteredVenues.length} venues found
+              {displayVenues.length} venues found
             </span>
           </div>
         </div>
@@ -361,7 +227,7 @@ const VenuesDirectory = () => {
             }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
           >
-            {filteredVenues.map((venue) => (
+            {displayVenues.map((venue) => (
               <motion.article
                 key={venue.id}
                 variants={{
@@ -409,7 +275,7 @@ const VenuesDirectory = () => {
                     <h3 className="font-serif text-xl text-foreground font-medium mb-2 group-hover:text-primary transition-colors">
                       {venue.name}
                     </h3>
-                    
+
                     <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-4">
                       <MapPin className="w-4 h-4" />
                       {venue.location}
@@ -423,7 +289,7 @@ const VenuesDirectory = () => {
                           ({venue.reviews})
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
                         <Users className="w-4 h-4" />
                         {venue.capacity}
@@ -435,7 +301,7 @@ const VenuesDirectory = () => {
             ))}
           </motion.div>
 
-          {filteredVenues.length === 0 && (
+          {displayVenues.length === 0 && (
             <div className="text-center py-16">
               <p className="text-muted-foreground text-lg mb-4">No venues found matching your criteria.</p>
               <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
@@ -444,7 +310,7 @@ const VenuesDirectory = () => {
         </div>
       </section>
 
-      <Footer />
+
     </div>
   );
 };

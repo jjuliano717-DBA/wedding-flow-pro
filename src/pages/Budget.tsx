@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BudgetScenario, ScenarioData } from "@/components/BudgetScenario";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,12 +6,86 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRightLeft, TrendingDown, TrendingUp, MapPin, Layers } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function Budget() {
+    const { user } = useAuth();
     const [scenarioA, setScenarioA] = useState<ScenarioData | null>(null);
     const [scenarioB, setScenarioB] = useState<ScenarioData | null>(null);
     const [showComparison, setShowComparison] = useState(false);
     const [hasAnsweredQuestion, setHasAnsweredQuestion] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Initial Load
+    useEffect(() => {
+        if (!user) return;
+
+        async function loadScenarios() {
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('budget_scenarios')
+                    .select('*')
+                    .eq('user_id', user.id);
+
+                if (error) {
+                    console.error("Error loading budgets:", error);
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    const scenA = data.find(s => s.type === 'A');
+                    const scenB = data.find(s => s.type === 'B');
+
+                    if (scenA) setScenarioA(scenA.data);
+                    if (scenB) {
+                        setScenarioB(scenB.data);
+                        setShowComparison(true);
+                        setHasAnsweredQuestion(true);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadScenarios();
+    }, [user]);
+
+    // Persist Logic
+    const saveScenario = async (type: 'A' | 'B', data: ScenarioData) => {
+        if (!user) return;
+        try {
+            const { error } = await supabase
+                .from('budget_scenarios')
+                .upsert({
+                    user_id: user.id,
+                    type,
+                    data,
+                    updated_at: new Date()
+                }, { onConflict: 'user_id, type' });
+
+            if (error) throw error;
+        } catch (err) {
+            console.error("Failed to save budget:", err);
+            toast.error("Error saving budget");
+        }
+    };
+
+    // Update Wrappers with Save Side-Effect
+    const updateScenarioA = (data: ScenarioData) => {
+        setScenarioA(data);
+        saveScenario('A', data);
+    };
+
+    const updateScenarioB = (data: ScenarioData) => {
+        setScenarioB(data);
+        saveScenario('B', data);
+    };
 
     const getScenarioTotal = (data: ScenarioData | null) => {
         if (!data) return 0;
@@ -36,6 +109,8 @@ export default function Budget() {
         setHasAnsweredQuestion(true);
     };
 
+    if (loading) return <div className="p-20 text-center">Loading your finances...</div>;
+
     return (
         <div className="container mx-auto px-4 py-8 pb-32">
             <div className="text-center mb-10">
@@ -46,7 +121,7 @@ export default function Budget() {
             </div>
 
             {/* Comparison Logic Question */}
-            {!hasAnsweredQuestion && (
+            {!hasAnsweredQuestion && !scenarioA && !scenarioB && (
                 <Card className="max-w-2xl mx-auto mb-10 border-rose-100 bg-rose-50/50">
                     <CardContent className="pt-6 text-center">
                         <h3 className="text-lg font-semibold mb-2">Planning a destination wedding or comparing venues?</h3>
@@ -65,8 +140,8 @@ export default function Budget() {
                 </Card>
             )}
 
-            {/* Control Bar (Visible after answering) */}
-            {hasAnsweredQuestion && (
+            {/* Control Bar (Visible after answering or loading data) */}
+            {(hasAnsweredQuestion || scenarioA) && (
                 <div className="flex justify-center items-center gap-4 mb-8">
                     <div className="flex items-center space-x-2 bg-white p-3 rounded-full border shadow-sm">
                         <Switch id="compare-mode" checked={showComparison} onCheckedChange={setShowComparison} />
@@ -93,7 +168,8 @@ export default function Budget() {
                                     id="scen-a"
                                     name="Scenario A (Primary)"
                                     defaultBudget={30000}
-                                    onUpdate={setScenarioA}
+                                    onUpdate={updateScenarioA}
+                                    initialData={scenarioA || undefined}
                                 />
                             </TabsContent>
                             <TabsContent value="scenario-b">
@@ -101,7 +177,8 @@ export default function Budget() {
                                     id="scen-b"
                                     name="Scenario B (Alternative)"
                                     defaultBudget={25000}
-                                    onUpdate={setScenarioB}
+                                    onUpdate={updateScenarioB}
+                                    initialData={scenarioB || undefined}
                                 />
                             </TabsContent>
                         </Tabs>
@@ -118,14 +195,16 @@ export default function Budget() {
                             id="scen-a-desktop"
                             name="Scenario A (Primary)"
                             defaultBudget={30000}
-                            onUpdate={setScenarioA}
+                            onUpdate={updateScenarioA}
+                            initialData={scenarioA || undefined}
                         />
 
                         <BudgetScenario
                             id="scen-b-desktop"
                             name="Scenario B (Alternative)"
                             defaultBudget={25000}
-                            onUpdate={setScenarioB}
+                            onUpdate={updateScenarioB}
+                            initialData={scenarioB || undefined}
                         />
                     </div>
                 </>
@@ -136,7 +215,8 @@ export default function Budget() {
                         id="scen-single"
                         name="Primary Budget"
                         defaultBudget={30000}
-                        onUpdate={setScenarioA}
+                        onUpdate={updateScenarioA}
+                        initialData={scenarioA || undefined}
                     />
                 </div>
             )}
@@ -168,7 +248,7 @@ export default function Budget() {
                             </div>
                         </div>
 
-                        <Button className="bg-slate-900 text-white hover:bg-slate-800">
+                        <Button className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => toast.success("All scenarios secured in cloud!")}>
                             <ArrowRightLeft className="w-4 h-4 mr-2" />
                             Save Comparison
                         </Button>

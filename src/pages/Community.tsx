@@ -1,83 +1,56 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, Users, Hash, Send, Trophy, Heart, Reply, ArrowLeft, Clock } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MessageSquare, Users, Hash, Send, Trophy, Heart, Reply, ArrowLeft, Clock, Loader2 } from "lucide-react";
 import { useGamification } from "@/context/GamificationContext";
 import { AIPlanningBuddy } from "@/components/AIPlanningBuddy";
 import { ProjectRoom } from "@/components/ProjectRoom";
 import { CatchUpSummary } from "@/components/CatchUpSummary";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
-// Types for Forum Data Structure
+// Types matching Supabase Schema
 type ReplyType = {
     id: number;
-    user: string;
+    thread_id: number;
+    user_id: string;
     text: string;
-    time: string;
-    avatar: string;
+    created_at: string;
+    // Joined data
+    user_name?: string; // We'll fetch this
 };
 
 type ThreadType = {
     id: number;
     title: string;
     note: string;
-    user: string;
-    daysAgo: number;
-    likes: number;
-    replies: ReplyType[];
-    avatar: string;
+    user_id: string;
     category: string;
+    likes: number;
+    created_at: string;
+    user_name?: string; // We'll fetch this
+    replies?: ReplyType[]; // Joined manually or via query
 };
 
-// Dummy Data
-const INITIAL_THREADS: ThreadType[] = [
-    {
-        id: 1,
-        title: "Vizcaya Booking Window?",
-        note: "Has anyone booked Vizcaya for 2026 yet? I heard they are opening dates soon but I can't get a hold of them.",
-        user: "Sarah J.",
-        daysAgo: 0, // Today
-        likes: 12,
-        avatar: "S",
-        category: "Venue Reviews",
-        replies: [
-            { id: 101, user: "Mike D.", text: "Just toured it yesterday! They are filling up fast.", time: "10:05 AM", avatar: "M" }
-        ]
-    },
-    {
-        id: 2,
-        title: "Floral Budget in Miami",
-        note: "I'm struggling with floral budgets. Everything seems to be over $5k for simple greenery. Any recommendations?",
-        user: "Jessica W.",
-        daysAgo: 8,
-        likes: 24,
-        avatar: "J",
-        category: "Budget Hacks",
-        replies: [
-            { id: 201, user: "Elena R.", text: "Try 'Tropical Stems'. They did my arch for $3k!", time: "2 days ago", avatar: "E" }
-        ]
-    }
-];
-
 export default function Community() {
+    const { user } = useAuth();
     const { level, xp, levelTitle, nextLevelXP, addXP } = useGamification();
     const [activeView, setActiveView] = useState<'feed' | 'projects'>('feed');
-    const [threads, setThreads] = useState<ThreadType[]>(() => {
-        const saved = localStorage.getItem("wedding_community_threads");
-        return saved ? JSON.parse(saved) : INITIAL_THREADS;
-    });
 
-    // Persist threads whenever they change
-    useEffect(() => {
-        localStorage.setItem("wedding_community_threads", JSON.stringify(threads));
-    }, [threads]);
+    // Data State
+    const [threads, setThreads] = useState<ThreadType[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // Thread View State
     const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
+    const [replies, setReplies] = useState<ReplyType[]>([]);
+    const [loadingReplies, setLoadingReplies] = useState(false);
 
     // New Post State
     const [newPostTitle, setNewPostTitle] = useState("");
@@ -88,61 +61,181 @@ export default function Community() {
 
     const selectedThread = threads.find(t => t.id === selectedThreadId);
 
-    // AI Buddy Integration: Flatten current context for the AI
-    // If in feed: empty. If in thread: messages + title/note.
+    // Initial Fetch
+    useEffect(() => {
+        fetchThreads();
+    }, []);
+
+    // Fetch Replies when thread is selected
+    useEffect(() => {
+        if (selectedThreadId) {
+            fetchReplies(selectedThreadId);
+        } else {
+            setReplies([]);
+        }
+    }, [selectedThreadId]);
+
+    const fetchThreads = async () => {
+        setLoading(true);
+        try {
+            // Fetch threads with user data (if we had a relation set up strictly, we could join. 
+            // For now, simpler to just fetch threads and basic info. 
+            // We'll rely on our 'users' table lookup if needed or just store display names if we want simple.)
+            // Actually, let's join users table.
+
+            const { data, error } = await supabase
+                .from('threads')
+                .select(`
+                    *,
+                    users ( full_name )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const formatted: ThreadType[] = (data || []).map((t: any) => ({
+                id: t.id,
+                title: t.title,
+                note: t.note,
+                user_id: t.user_id,
+                category: t.category,
+                likes: t.likes,
+                created_at: t.created_at,
+                user_name: t.users?.full_name || 'Anonymous'
+            }));
+            setThreads(formatted);
+        } catch (error) {
+            console.error("Error fetching threads:", error);
+            toast.error("Could not load community feed.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchReplies = async (threadId: number) => {
+        setLoadingReplies(true);
+        try {
+            const { data, error } = await supabase
+                .from('replies')
+                .select(`
+                    *,
+                    users ( full_name )
+                `)
+                .eq('thread_id', threadId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            const formatted: ReplyType[] = (data || []).map((r: any) => ({
+                id: r.id,
+                thread_id: r.thread_id,
+                user_id: r.user_id,
+                text: r.text,
+                created_at: r.created_at,
+                user_name: r.users?.full_name || 'Anonymous'
+            }));
+            setReplies(formatted);
+        } catch (error) {
+            console.error("Error fetching replies", error);
+        } finally {
+            setLoadingReplies(false);
+        }
+    };
+
+    const handleCreateThread = async () => {
+        if (!newPostTitle.trim() || !newPostNote.trim() || !user) {
+            if (!user) toast.error("Please sign in to post.");
+            else toast.error("Title and message are required.");
+            return;
+        }
+
+        try {
+            const newThread = {
+                title: newPostTitle,
+                note: newPostNote,
+                user_id: user.id,
+                category: "General Chat"
+            };
+
+            const { data, error } = await supabase
+                .from('threads')
+                .insert(newThread)
+                .select(`*, users ( full_name )`)
+                .single();
+
+            if (error) throw error;
+
+            const formatted: ThreadType = {
+                id: data.id,
+                title: data.title,
+                note: data.note,
+                user_id: data.user_id,
+                category: data.category,
+                likes: data.likes,
+                created_at: data.created_at,
+                user_name: data.users?.full_name || user.fullName
+            };
+
+            setThreads([formatted, ...threads]);
+            setNewPostTitle("");
+            setNewPostNote("");
+            addXP(20, "Created New Thread");
+            toast.success("Discussion started!");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Failed to post thread.");
+        }
+    };
+
+    const handleReply = async () => {
+        if (!replyText.trim() || !selectedThread || !user) return;
+
+        try {
+            const newReply = {
+                thread_id: selectedThread.id,
+                user_id: user.id,
+                text: replyText
+            };
+
+            const { data, error } = await supabase
+                .from('replies')
+                .insert(newReply)
+                .select(`*, users ( full_name )`)
+                .single();
+
+            if (error) throw error;
+
+            const formatted: ReplyType = {
+                id: data.id,
+                thread_id: data.thread_id,
+                user_id: data.user_id,
+                text: data.text,
+                created_at: data.created_at,
+                user_name: data.users?.full_name || user.fullName
+            };
+
+            setReplies([...replies, formatted]);
+            setReplyText("");
+            addXP(10, "Replied to Thread");
+            toast.success("Reply posted!");
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to post reply.");
+        }
+    };
+
+    // AI Buddy Integration
     const aiMessages = selectedThread
         ? [
-            { id: 0, user: selectedThread.user, text: `${selectedThread.title} ${selectedThread.note}` },
-            ...selectedThread.replies
+            { id: 0, user: selectedThread.user_name || 'User', text: `${selectedThread.title} ${selectedThread.note}` },
+            ...replies.map(r => ({ id: r.id, user: r.user_name || 'User', text: r.text }))
         ]
         : [];
 
-    const handleCreateThread = () => {
-        if (!newPostTitle.trim() || !newPostNote.trim()) return;
-
-        const newThread: ThreadType = {
-            id: Date.now(),
-            title: newPostTitle,
-            note: newPostNote,
-            user: "Me", // Ideally this comes from Auth Context
-            daysAgo: 0,
-            likes: 0,
-            avatar: "ME",
-            category: "General Chat",
-            replies: []
-        };
-
-        setThreads([newThread, ...threads]);
-        setNewPostTitle("");
-        setNewPostNote("");
-        addXP(20, "Created New Thread");
-    };
-
-    const handleReply = () => {
-        if (!replyText.trim() || !selectedThread) return;
-
-        const newReply: ReplyType = {
-            id: Date.now(),
-            user: "Me",
-            text: replyText,
-            time: "Just now",
-            avatar: "ME"
-        };
-
-        const updatedThreads = threads.map(t => {
-            if (t.id === selectedThread.id) {
-                return { ...t, replies: [...t.replies, newReply] };
-            }
-            return t;
-        });
-
-        setThreads(updatedThreads);
-        setReplyText("");
-        addXP(10, "Replied to Thread");
-    };
-
     const handleLike = (threadId: number, e: React.MouseEvent) => {
         e.stopPropagation();
+        // Optimistic update - in real app would hit DB
+        // For simplicity, we just update local state since we lack a 'likes' table join
         const updatedThreads = threads.map(t => {
             if (t.id === threadId) return { ...t, likes: t.likes + 1 };
             return t;
@@ -151,13 +244,20 @@ export default function Community() {
         addXP(5, "Liked a Post");
     };
 
+    const formatTimeAgo = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'Today';
+        return `${diffDays} days ago`;
+    };
+
     return (
         <div className="container mx-auto px-4 py-8 mt-16 max-w-7xl min-h-[calc(100vh-100px)]">
             <div className="grid grid-cols-12 gap-6">
 
                 {/* LEFT SIDEBAR */}
                 <div className="col-span-12 md:col-span-3 flex flex-col gap-6">
-                    {/* ... Component contents ... */}
                     <Card className="border-t-4 border-t-purple-500">
                         <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
@@ -237,46 +337,54 @@ export default function Community() {
 
                                     {/* Thread List */}
                                     <div className="space-y-4">
-                                        {threads.map(thread => (
-                                            <Card
-                                                key={thread.id}
-                                                className="cursor-pointer hover:border-purple-300 transition-colors"
-                                                onClick={() => setSelectedThreadId(thread.id)}
-                                            >
-                                                <CardContent className="p-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="flex gap-2 text-xs text-muted-foreground items-center">
-                                                            <Avatar className="w-6 h-6">
-                                                                <AvatarFallback className="text-[10px]">{thread.avatar}</AvatarFallback>
-                                                            </Avatar>
-                                                            <span className="font-semibold text-slate-700">{thread.user}</span>
-                                                            <span>•</span>
-                                                            <span className="flex items-center gap-1">
-                                                                <Clock className="w-3 h-3" />
-                                                                {thread.daysAgo === 0 ? 'Today' : `${thread.daysAgo} days ago`}
+                                        {loading ? (
+                                            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-purple-600" /></div>
+                                        ) : threads.length === 0 ? (
+                                            <div className="text-center py-10 text-muted-foreground">No discussions yet. Start one!</div>
+                                        ) : (
+                                            threads.map(thread => (
+                                                <Card
+                                                    key={thread.id}
+                                                    className="cursor-pointer hover:border-purple-300 transition-colors"
+                                                    onClick={() => setSelectedThreadId(thread.id)}
+                                                >
+                                                    <CardContent className="p-4">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div className="flex gap-2 text-xs text-muted-foreground items-center">
+                                                                <Avatar className="w-6 h-6">
+                                                                    <AvatarFallback className="text-[10px] bg-purple-100 text-purple-700">
+                                                                        {thread.user_name?.charAt(0).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-semibold text-slate-700">{thread.user_name}</span>
+                                                                <span>•</span>
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    {formatTimeAgo(thread.created_at)}
+                                                                </span>
+                                                            </div>
+                                                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold">
+                                                                {thread.category}
                                                             </span>
                                                         </div>
-                                                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold">
-                                                            {thread.category}
-                                                        </span>
-                                                    </div>
 
-                                                    <h3 className="font-bold text-lg mb-1 text-slate-900">{thread.title}</h3>
-                                                    <p className="text-sm text-slate-600 line-clamp-2">{thread.note}</p>
+                                                        <h3 className="font-bold text-lg mb-1 text-slate-900">{thread.title}</h3>
+                                                        <p className="text-sm text-slate-600 line-clamp-2">{thread.note}</p>
 
-                                                    <div className="mt-4 flex gap-4 text-muted-foreground">
-                                                        <Button variant="ghost" size="sm" className="h-8 gap-2 hover:text-rose-500 hover:bg-rose-50" onClick={(e) => handleLike(thread.id, e)}>
-                                                            <Heart className={`w-4 h-4 ${thread.likes > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
-                                                            {thread.likes} Love
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm" className="h-8 gap-2 hover:text-blue-500 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); setSelectedThreadId(thread.id); }}>
-                                                            <MessageSquare className="w-4 h-4" />
-                                                            {thread.replies.length} Replies
-                                                        </Button>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+                                                        <div className="mt-4 flex gap-4 text-muted-foreground">
+                                                            <Button variant="ghost" size="sm" className="h-8 gap-2 hover:text-rose-500 hover:bg-rose-50" onClick={(e) => handleLike(thread.id, e)}>
+                                                                <Heart className={`w-4 h-4 ${thread.likes > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+                                                                {thread.likes} Love
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" className="h-8 gap-2 hover:text-blue-500 hover:bg-blue-50">
+                                                                <MessageSquare className="w-4 h-4" />
+                                                                Reply
+                                                            </Button>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -291,10 +399,12 @@ export default function Community() {
                                         </div>
                                         <CardTitle className="text-xl">{selectedThread?.title}</CardTitle>
                                         <div className="flex gap-2 text-sm text-muted-foreground items-center mt-1">
-                                            <Avatar className="w-6 h-6"><AvatarFallback>{selectedThread?.avatar}</AvatarFallback></Avatar>
-                                            <span>{selectedThread?.user}</span>
+                                            <Avatar className="w-6 h-6">
+                                                <AvatarFallback>{selectedThread?.user_name?.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <span>{selectedThread?.user_name}</span>
                                             <span>•</span>
-                                            <span>{selectedThread?.daysAgo === 0 ? 'Today' : `${selectedThread?.daysAgo} days ago`}</span>
+                                            <span>{selectedThread ? formatTimeAgo(selectedThread.created_at) : ''}</span>
                                         </div>
                                     </CardHeader>
 
@@ -310,21 +420,23 @@ export default function Community() {
 
                                         <div className="px-4 pb-4 space-y-4">
                                             <h4 className="text-sm font-bold text-muted-foreground uppercase px-2">Replies</h4>
-                                            {selectedThread?.replies.map((reply) => (
+                                            {loadingReplies ? (
+                                                <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                                            ) : replies.map((reply) => (
                                                 <div key={reply.id} className="flex gap-3">
                                                     <Avatar className="h-8 w-8 mt-1">
-                                                        <AvatarFallback>{reply.avatar}</AvatarFallback>
+                                                        <AvatarFallback>{reply.user_name?.charAt(0)}</AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex-1 bg-white p-3 rounded-lg border shadow-sm">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <span className="font-bold text-sm">{reply.user}</span>
-                                                            <span className="text-xs text-muted-foreground">{reply.time}</span>
+                                                            <span className="font-bold text-sm">{reply.user_name}</span>
+                                                            <span className="text-xs text-muted-foreground">{formatTimeAgo(reply.created_at)}</span>
                                                         </div>
                                                         <p className="text-sm text-slate-700">{reply.text}</p>
                                                     </div>
                                                 </div>
                                             ))}
-                                            {selectedThread?.replies.length === 0 && (
+                                            {!loadingReplies && replies.length === 0 && (
                                                 <div className="text-center py-8 text-muted-foreground italic">
                                                     No replies yet. Be the first to help!
                                                 </div>
@@ -334,13 +446,13 @@ export default function Community() {
 
                                     <div className="p-4 bg-white border-t flex flex-col gap-2">
                                         <Textarea
-                                            placeholder={`Reply to ${selectedThread?.user}... (Suggest 'budget' or 'florist' to trigger AI buddy)`}
+                                            placeholder={`Reply to ${selectedThread?.user_name}...`}
                                             value={replyText}
                                             onChange={e => setReplyText(e.target.value)}
                                             className="min-h-[80px]"
                                         />
                                         <div className="flex justify-end">
-                                            <Button onClick={handleReply} className="gap-2 bg-purple-600 hover:bg-purple-700">
+                                            <Button onClick={handleReply} className="gap-2 bg-purple-600 hover:bg-purple-700" disabled={!replyText.trim()}>
                                                 <Reply className="w-4 h-4" /> Post Reply
                                             </Button>
                                         </div>

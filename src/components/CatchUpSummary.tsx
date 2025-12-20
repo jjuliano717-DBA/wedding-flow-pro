@@ -21,8 +21,13 @@ const INITIAL_TASKS: Task[] = [
 export function CatchUpSummary() {
     const { addXP } = useGamification();
     const [tasks, setTasks] = useState<Task[]>(() => {
-        const saved = localStorage.getItem("wedding_tasks");
-        return saved ? JSON.parse(saved) : INITIAL_TASKS;
+        try {
+            const saved = localStorage.getItem("wedding_tasks");
+            return saved ? JSON.parse(saved) : INITIAL_TASKS;
+        } catch (e) {
+            console.error("Failed to parse tasks", e);
+            return INITIAL_TASKS;
+        }
     });
     const [newTask, setNewTask] = useState("");
 

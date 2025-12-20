@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Lightbulb, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const tips = [
   {
@@ -42,19 +43,21 @@ export const TipsSection = () => {
               <Lightbulb className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">Expert Advice</span>
             </div>
-            
+
             <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-4">
               Wedding Planning Tips
             </h2>
             <p className="text-muted-foreground text-lg mb-8">
-              From choosing vendors to managing your timeline, our expert guides 
+              From choosing vendors to managing your timeline, our expert guides
               help you navigate every step of your wedding journey.
             </p>
 
-            <Button variant="champagne" size="lg" className="gap-2">
-              Explore All Tips
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+            <Link to="/tips">
+              <Button variant="champagne" size="lg" className="gap-2">
+                Explore All Tips
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </motion.div>
 
           {/* Right Content - Tips List */}

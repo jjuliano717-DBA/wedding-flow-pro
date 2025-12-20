@@ -1,7 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { Layout } from "./components/Layout";
@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import RealWeddings from "./pages/RealWeddings";
 import VendorsDirectory from "./pages/VendorsDirectory";
 import VenuesDirectory from "./pages/VenuesDirectory";
+import PlanningTips from "./pages/PlanningTips";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Budget from "./pages/Budget";
@@ -24,6 +25,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -39,21 +41,34 @@ const App = () => (
                 <Route path="/weddings" element={<RealWeddings />} />
                 <Route path="/vendors" element={<VendorsDirectory />} />
                 <Route path="/venues" element={<VenuesDirectory />} />
+                <Route path="/tips" element={<PlanningTips />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/style-matcher" element={
                   <div className="container mx-auto py-20">
-                    <StyleSwipe onComplete={() => window.location.href = '/'} />
+                    <StyleSwipe />
                   </div>
                 } />
 
-                {/* PRIVATE ROUTES (Require Login) */}
+                {/* PRIVATE ROUTES */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profile" element={<Profile />} />
+                </Route>
+
+                {/* COUPLE & ADMIN ROUTES */}
+                <Route element={<ProtectedRoute allowedRoles={['couple', 'admin']} />}>
                   <Route path="/budget" element={<Budget />} />
                   <Route path="/planner" element={<Planner />} />
-                  <Route path="/business" element={<BusinessDashboard />} />
                   <Route path="/community" element={<Community />} />
+                </Route>
+
+                {/* BUSINESS & ADMIN ROUTES */}
+                <Route element={<ProtectedRoute allowedRoles={['business', 'admin']} />}>
+                  <Route path="/business" element={<BusinessDashboard />} />
+                </Route>
+
+                {/* ADMIN ROUTES */}
+                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                   <Route path="/admin" element={<AdminDashboard />} />
                 </Route>
 

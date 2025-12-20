@@ -1,4 +1,3 @@
-
 import { HeroSection } from "@/components/HeroSection";
 import { FeaturedWeddings } from "@/components/FeaturedWeddings";
 import { VendorCategories } from "@/components/VendorCategories";

@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserRole } from "@/context/AuthContext";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -35,6 +36,16 @@ const navLinks = [
 export const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
 
+  // Filter nav links based on role
+  const visibleNavLinks = navLinks.filter(link => {
+    if (link.name === "Community Chat") {
+      return user && (['couple', 'admin'] as UserRole[]).includes(user.role as UserRole);
+    }
+    return true;
+  });
+
+  const showPlanner = user && (['couple', 'admin'] as UserRole[]).includes(user.role as UserRole);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50 transition-all duration-300">
       <div className="container mx-auto px-4">
@@ -52,49 +63,51 @@ export const Header = () => {
             <NavigationMenu>
               <NavigationMenuList>
                 {/* Planner Mega Menu */}
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="bg-transparent">Planner</NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
-                      <li className="row-span-3">
-                        <NavigationMenuLink asChild>
-                          <Link
-                            className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-rose-50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                            to="/planner"
-                          >
-                            <Heart className="h-6 w-6 text-rose-gold mb-2" />
-                            <div className="mb-2 mt-4 text-lg font-medium">
-                              The Planner
-                            </div>
-                            <p className="text-sm leading-tight text-muted-foreground">
-                              Your central hub for style, budget, and matches.
-                            </p>
+                {showPlanner && (
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="bg-transparent">Planner</NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                        <li className="row-span-3">
+                          <NavigationMenuLink asChild>
+                            <Link
+                              className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-rose-50 to-muted p-6 no-underline outline-none focus:shadow-md"
+                              to="/planner"
+                            >
+                              <Heart className="h-6 w-6 text-rose-gold mb-2" />
+                              <div className="mb-2 mt-4 text-lg font-medium">
+                                The Planner
+                              </div>
+                              <p className="text-sm leading-tight text-muted-foreground">
+                                Your central hub for style, budget, and matches.
+                              </p>
+                            </Link>
+                          </NavigationMenuLink>
+                        </li>
+                        <li>
+                          <Link to="/style-matcher" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                            <div className="text-sm font-medium leading-none">My Style Matcher</div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Define your Florida vibe.</p>
                           </Link>
-                        </NavigationMenuLink>
-                      </li>
-                      <li>
-                        <Link to="/style-matcher" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                          <div className="text-sm font-medium leading-none">My Style Matcher</div>
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Define your Florida vibe.</p>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/budget" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                          <div className="text-sm font-medium leading-none">Budget Advisor</div>
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Track spend & hidden fees.</p>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/vendors" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                          <div className="text-sm font-medium leading-none">Vendor Directory</div>
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Find the perfect pros.</p>
-                        </Link>
-                      </li>
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+                        </li>
+                        <li>
+                          <Link to="/budget" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                            <div className="text-sm font-medium leading-none">Budget Advisor</div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Track spend & hidden fees.</p>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/vendors" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                            <div className="text-sm font-medium leading-none">Vendor Directory</div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Find the perfect pros.</p>
+                          </Link>
+                        </li>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+                )}
 
-                {navLinks.map((link) => (
+                {visibleNavLinks.map((link) => (
                   <NavigationMenuItem key={link.name}>
                     <Link to={link.href}>
                       <NavigationMenuLink className={navigationMenuTriggerStyle() + " bg-transparent"}>
@@ -220,7 +233,7 @@ export const Header = () => {
                       <span className="font-medium">My Style</span>
                     </Link>
 
-                    {navLinks.map((link) => (
+                    {visibleNavLinks.map((link) => (
                       <Link key={link.name} to={link.href} className="flex items-center gap-4 px-6 py-3 text-foreground hover:bg-slate-50 active:bg-slate-100 transition-colors">
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
                           <div className="w-2 h-2 rounded-full bg-slate-400"></div>

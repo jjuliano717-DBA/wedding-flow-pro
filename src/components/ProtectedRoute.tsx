@@ -7,7 +7,13 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return <div className="h-screen w-full flex items-center justify-center bg-rose-50">
+            <div className="animate-spin text-4xl">🌸</div>
+        </div>; // Or a proper spinner component
+    }
 
     // If not logged in, redirect to Auth
     if (!isAuthenticated) {

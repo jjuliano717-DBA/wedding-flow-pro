@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { floridaVendors } from "@/data/florida_vendors";
+// import { floridaVendors } from "@/data/florida_vendors"; // Deprecated
 import { getCompositeRankedVendors, CompositeMatch } from "@/lib/matcher";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, DollarSign, Calendar, Heart, ArrowRight } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function Planner() {
     const { user } = useAuth();
@@ -16,10 +17,44 @@ export default function Planner() {
     const stress = user?.stressLevel || 5;
 
     useEffect(() => {
-        if (user) {
-            const ranked = getCompositeRankedVendors(floridaVendors, user);
-            setMatches(ranked.slice(0, 4)); // Top 4 matches
-        }
+        const fetchAndRankVendors = async () => {
+            if (user) {
+                // Fetch real vendors from Supabase
+                const { data: vendors, error } = await supabase.from('vendors').select('*');
+
+                if (error) {
+                    console.error("Error fetching vendors:", error);
+                    return;
+                }
+
+                if (vendors && vendors.length > 0) {
+                    // Adapt Supabase vendors to the format expected by the matcher
+                    // Assuming 'vendors' table structure matches what we expect or we map it.
+                    // For now, let's assume 'vendors' table has compatible fields or map them:
+                    const mappedVendors: any[] = vendors.map(v => ({
+                        id: v.id,
+                        name: v.name,
+                        category: v.category || 'Venue', // Default if missing
+                        priceTier: v.price_tier || 2,
+                        styleTags: v.style_tags || [],
+                        rating: v.rating || 5.0,
+                        imageUrl: v.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800',
+                        location: v.location || 'Miami, FL',
+                        description: v.description || 'Verified Vendor',
+                        hub: 'Miami', // Default
+                        styleVector: (v.style_tags || []).reduce((acc: any, tag: string) => {
+                            acc[tag] = 1;
+                            return acc;
+                        }, {})
+                    }));
+
+                    const ranked = getCompositeRankedVendors(mappedVendors, user);
+                    setMatches(ranked.slice(0, 4)); // Top 4 matches
+                }
+            }
+        };
+
+        fetchAndRankVendors();
     }, [user]);
 
     // Vibe-Aware Tips Logic
@@ -55,7 +90,7 @@ export default function Planner() {
                         The Planner
                     </h1>
                     <p className="text-muted-foreground mt-2">
-                        Welcome back, {user?.fullName?.split(" ")[0]}. Let's orchestrate your dream.
+                        Welcome back, {(user?.fullName?.split(" ") || [])[0] || "Planner"}. Let's orchestrate your dream.
                     </p>
                 </div>
                 <div className={`px-4 py-2 rounded-lg border ${tip.color} max-w-md`}>
@@ -77,9 +112,11 @@ export default function Planner() {
                     </CardHeader>
                     <CardContent>
                         <div className="h-32 rounded-md bg-cover bg-center mb-4 relative overflow-hidden" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1544124971-e962be8c47f7?q=80&w=400)' }}>
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                <span className="text-white font-serif font-bold text-lg">
-                                    {user?.stylePreferences ? "Profile Active" : "Start Matching"}
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 text-center">
+                                <span className="text-white font-serif font-bold text-lg leading-tight">
+                                    {user?.stylePreferences?.primaryArchetype
+                                        ? `My Style = ${user.stylePreferences.primaryArchetype}${user.stylePreferences.secondaryArchetype ? ' & ' + user.stylePreferences.secondaryArchetype : ''}`
+                                        : "Start Matching"}
                                 </span>
                             </div>
                         </div>
