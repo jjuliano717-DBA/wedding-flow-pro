@@ -111,54 +111,54 @@ const VenueDetail = () => {
 
                 {/* Hero Gallery */}
                 <div className="container mx-auto px-4 mb-12">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[500px] relative">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 h-[50vh] min-h-[300px] max-h-[500px] w-full rounded-2xl overflow-hidden relative">
                         {/* Main Large Image */}
-                        <div className="md:col-span-2 relative rounded-2xl overflow-hidden cursor-pointer group">
+                        <div className={`${images.length < 3 ? 'md:col-span-3' : 'md:col-span-2'} relative h-full cursor-pointer group`}>
                             <img src={images[activeImage]} alt={venue.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                             <div className="absolute top-4 right-4 flex gap-2">
-                                <div className="absolute top-4 right-4 flex gap-2">
-                                    <Button
-                                        size="icon"
-                                        variant="secondary"
-                                        className={`rounded-full bg-white/90 hover:bg-white transition-colors ${isLiked ? 'text-rose-500' : 'text-gray-400'}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsLiked(!isLiked);
-                                        }}
-                                    >
-                                        <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                                    </Button>
-                                    <Button
-                                        size="icon"
-                                        variant="secondary"
-                                        className="rounded-full bg-white/90 hover:bg-white text-gray-700"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleShare();
-                                        }}
-                                    >
-                                        <Share2 className="w-5 h-5" />
-                                    </Button>
+                                <Button
+                                    size="icon"
+                                    variant="secondary"
+                                    className={`rounded-full bg-white/90 hover:bg-white transition-colors ${isLiked ? 'text-rose-500' : 'text-gray-400'}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsLiked(!isLiked);
+                                    }}
+                                >
+                                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                                </Button>
+                                <Button
+                                    size="icon"
+                                    variant="secondary"
+                                    className="rounded-full bg-white/90 hover:bg-white text-gray-700"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleShare();
+                                    }}
+                                >
+                                    <Share2 className="w-5 h-5" />
+                                </Button>
+                            </div>
+                        </div>
+                        {/* Side Images - Only show if we have enough images */}
+                        {images.length >= 3 && (
+                            <div className="hidden md:flex flex-col gap-2 h-full">
+                                <div className="flex-1 relative cursor-pointer overflow-hidden" onClick={() => setActiveImage(1)}>
+                                    <img src={images[1]} alt="Venue detail" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                                </div>
+                                <div className="flex-1 relative cursor-pointer overflow-hidden" onClick={() => setActiveImage(2)}>
+                                    <img src={images[2]} alt="Venue detail" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                                    {images.length > 3 && (
+                                        <div
+                                            className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/40 transition-colors"
+                                            onClick={() => setIsGalleryOpen(true)}
+                                        >
+                                            <span className="text-white font-medium text-lg">See All Photos</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
-                        {/* Side Images */}
-                        <div className="hidden md:flex flex-col gap-4">
-                            <div className="flex-1 rounded-2xl overflow-hidden relative cursor-pointer" onClick={() => setActiveImage(1)}>
-                                <img src={images[1] || images[0]} alt="Venue detail" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
-                            </div>
-                            <div className="flex-1 rounded-2xl overflow-hidden relative cursor-pointer" onClick={() => setActiveImage(2)}>
-                                <img src={images[2] || images[0]} alt="Venue detail" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
-                                {images.length > 3 && (
-                                    <div
-                                        className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/40 transition-colors"
-                                        onClick={() => setIsGalleryOpen(true)}
-                                    >
-                                        <span className="text-white font-medium text-lg">See All Photos</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
@@ -178,7 +178,9 @@ const VenueDetail = () => {
                                 <span>{venue.heart_rating || 5.0}</span>
                                 <span className="text-muted-foreground text-sm font-normal">({venue.google_reviews || 0} reviews)</span>
                             </div>
-                            <span className="text-sm text-muted-foreground">{venue.type} Venue</span>
+                            <span className="text-sm text-muted-foreground">
+                                {venue.type?.includes('Venue') ? venue.type : `${venue.type} Venue`}
+                            </span>
                         </div>
                     </div>
 
