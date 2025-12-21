@@ -83,9 +83,16 @@ interface Venue {
     google_reviews: number;
     heart_rating: number;
     exclusive: boolean;
+    featured: boolean;
     indoor: boolean;
     outdoor: boolean;
     image_url: string;
+    website: string;
+    google_business_url: string;
+    contact_email: string;
+    phone: string;
+    amenities: string[];
+    images: string[];
 }
 
 interface Vendor {
@@ -94,10 +101,15 @@ interface Vendor {
     description: string;
     type: string;
     location: string;
+    website: string;
+    google_business_url: string;
+    service_zipcodes: string[];
     google_rating: number;
     google_reviews: number;
     heart_rating: number;
     exclusive: boolean;
+    featured: boolean;
+    image_url: string;
 }
 
 interface RealWedding {
@@ -106,7 +118,8 @@ interface RealWedding {
     location: string;
     style: string;
     season: string;
-    featuring: string;
+    featuring: string; // Keep for backward compat or single highlight
+    vendors: string[]; // List of vendors
     exclusive: boolean;
     image_url: string;
 }
@@ -119,11 +132,11 @@ interface PlanningTip {
     author: string;
     read_time: string;
     image_url: string;
-    publish: boolean; // DB might be 'published' or 'publish', using publish to match DB
+    publish: boolean;
     exclusive: boolean;
 }
 
-type EditorType = 'vendor' | 'venue' | 'wedding' | 'tip';
+type EditorType = 'vendor' | 'venue' | 'wedding' | 'tip' | 'user';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('vendors');
@@ -182,7 +195,8 @@ const AdminDashboard = () => {
             'vendor': 'vendors',
             'venue': 'venues',
             'wedding': 'real_weddings',
-            'tip': 'planning_tips'
+            'tip': 'planning_tips',
+            'user': 'users'
         };
 
         try {
@@ -195,6 +209,7 @@ const AdminDashboard = () => {
             if (type === 'venue') setVenues(prev => prev.filter(i => i.id !== id));
             if (type === 'wedding') setWeddings(prev => prev.filter(i => i.id !== id));
             if (type === 'tip') setTips(prev => prev.filter(i => i.id !== id));
+            if (type === 'user') setUsers(prev => prev.filter(i => i.id !== id));
 
         } catch (error) {
             console.error(error);
@@ -211,10 +226,11 @@ const AdminDashboard = () => {
             setFormData({ ...item });
         } else {
             // Default values for new items
-            if (type === 'vendor') setFormData({ name: '', type: 'Photographer', description: '', location: '', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, image_url: '' });
-            if (type === 'venue') setFormData({ name: '', type: 'Garden', description: '', location: '', capacity: '50-300', capacity_num: 100, price: '$$$', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, indoor: true, outdoor: true, image_url: '' });
-            if (type === 'wedding') setFormData({ couple_names: '', location: '', style: 'Classic', season: 'Spring', featuring: '', exclusive: false, image_url: '' });
+            if (type === 'vendor') setFormData({ name: '', type: 'Photographer', description: '', location: '', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, featured: false, image_url: '', website: '', google_business_url: '', service_zipcodes: [] });
+            if (type === 'venue') setFormData({ name: '', type: 'Ballroom', description: '', location: '', capacity: '50-300', capacity_num: 100, price: '$$$', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, featured: false, indoor: true, outdoor: true, image_url: '', website: '', google_business_url: '', contact_email: '', phone: '', amenities: [], images: [] });
+            if (type === 'wedding') setFormData({ couple_names: '', location: '', style: 'Classic', season: 'Spring', featuring: '', vendors: [], exclusive: false, image_url: '' });
             if (type === 'tip') setFormData({ title: '', category: 'Planning', content: '', image_url: '', author: '', read_time: '', tags: [], publish: true, exclusive: false });
+            if (type === 'user') setFormData({ full_name: '', email: '', role: 'couple', status: 'active' });
         }
         setIsDialogOpen(true);
     };
@@ -224,7 +240,8 @@ const AdminDashboard = () => {
             'vendor': 'vendors',
             'venue': 'venues',
             'wedding': 'real_weddings',
-            'tip': 'planning_tips'
+            'tip': 'planning_tips',
+            'user': 'users'
         };
 
         const table = tableMap[editorType];
@@ -256,6 +273,8 @@ const AdminDashboard = () => {
                 setWeddings(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
             } else if (editorType === 'tip') {
                 setTips(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
+            } else if (editorType === 'user') {
+                setUsers(prev => editingId ? prev.map(i => i.id === editingId ? savedItem : i) : [...prev, savedItem]);
             }
 
             toast.success("Saved successfully!");
@@ -285,23 +304,36 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                     <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
-                    <div className="space-y-2"><Label>Image URL (Photo)</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://example.com/photo.jpg" /></div>
-                    <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Image URL (Photo)</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://example.com/photo.jpg" /></div>
+                        <div className="space-y-2"><Label>Website</Label><Input value={formData.website || ''} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://example.com" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Service Zipcodes (comma separated)</Label><Input value={Array.isArray(formData.service_zipcodes) ? formData.service_zipcodes.join(', ') : (formData.service_zipcodes || '')} onChange={e => setFormData({ ...formData, service_zipcodes: e.target.value.split(',').map((t: string) => t.trim()) })} placeholder="33602, 33603" /></div>
+                    </div>
+                    <div className="space-y-2"><Label>Google Business URL</Label><Input value={formData.google_business_url || ''} onChange={e => setFormData({ ...formData, google_business_url: e.target.value })} placeholder="https://g.page/..." /></div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="space-y-2"><Label>Google Rating</Label><Input type="number" step="0.1" value={formData.google_rating || 0} onChange={e => setFormData({ ...formData, google_rating: parseFloat(e.target.value) })} /></div>
                         <div className="space-y-2"><Label>Reviews</Label><Input type="number" value={formData.google_reviews || 0} onChange={e => setFormData({ ...formData, google_reviews: parseInt(e.target.value) })} /></div>
                         <div className="space-y-2"><Label>Heart Rating</Label><Input type="number" step="0.1" value={formData.heart_rating || 0} onChange={e => setFormData({ ...formData, heart_rating: parseFloat(e.target.value) })} /></div>
                     </div>
-                    <div className="flex items-center space-x-2 pt-2">
-                        <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
-                        <Label htmlFor="exclusive">Exclusive Vendor?</Label>
+                    <div className="flex items-center gap-6 pt-2">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
+                            <Label htmlFor="exclusive">Exclusive Vendor?</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="featured" checked={formData.featured || false} onCheckedChange={c => setFormData({ ...formData, featured: c })} />
+                            <Label htmlFor="featured">Featured?</Label>
+                        </div>
                     </div>
                 </div>
             )
         }
         if (editorType === 'venue') {
             return (
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4 h-[70vh] overflow-y-auto pr-2">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Name</Label><Input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
                         <div className="space-y-2"><Label>Type</Label>
@@ -314,8 +346,23 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                     <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
-                    <div className="space-y-2"><Label>Image URL</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." /></div>
-                    <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Main Image URL</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." /></div>
+                        <div className="space-y-2"><Label>Website</Label><Input value={formData.website || ''} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://..." /></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Contact Email</Label><Input value={formData.contact_email || ''} onChange={e => setFormData({ ...formData, contact_email: e.target.value })} placeholder="info@venue.com" /></div>
+                        <div className="space-y-2"><Label>Phone</Label><Input value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(555) 555-5555" /></div>
+                    </div>
+
+                    <div className="space-y-2"><Label>Google Business URL</Label><Input value={formData.google_business_url || ''} onChange={e => setFormData({ ...formData, google_business_url: e.target.value })} placeholder="https://g.page/..." /></div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Guests</Label><Input type="number" value={formData.guests || 0} onChange={e => setFormData({ ...formData, guests: parseInt(e.target.value) })} /></div>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Capacity (Text)</Label><Input value={formData.capacity || ''} onChange={e => setFormData({ ...formData, capacity: e.target.value })} placeholder="e.g. 50-300" /></div>
@@ -333,6 +380,10 @@ const AdminDashboard = () => {
                         </div>
                     </div>
 
+                    <div className="space-y-2"><Label>Amenities (comma separated)</Label><Textarea value={Array.isArray(formData.amenities) ? formData.amenities.join(', ') : (formData.amenities || '')} onChange={e => setFormData({ ...formData, amenities: e.target.value.split(',').map((t: string) => t.trim()) })} placeholder="Parking, WiFi, Catering Kitchen..." /></div>
+
+                    <div className="space-y-2"><Label>Gallery Images (comma separated URLs)</Label><Textarea value={Array.isArray(formData.images) ? formData.images.join(',\n') : (formData.images || '')} onChange={e => setFormData({ ...formData, images: e.target.value.split(/[,\n]/).map((t: string) => t.trim()).filter(Boolean) })} placeholder="https://..., https://..." className="min-h-[100px] font-mono text-xs" /></div>
+
                     <div className="flex gap-6 py-2">
                         <div className="flex items-center space-x-2">
                             <Switch id="indoor" checked={formData.indoor || false} onCheckedChange={c => setFormData({ ...formData, indoor: c })} />
@@ -343,18 +394,21 @@ const AdminDashboard = () => {
                             <Label htmlFor="outdoor">Outdoor</Label>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
-                        <div className="space-y-2"><Label>Guests</Label><Input type="number" value={formData.guests || 0} onChange={e => setFormData({ ...formData, guests: parseInt(e.target.value) })} /></div>
-                    </div>
+
                     <div className="grid grid-cols-3 gap-2">
                         <div className="space-y-2"><Label>Google Rating</Label><Input type="number" step="0.1" value={formData.google_rating || 0} onChange={e => setFormData({ ...formData, google_rating: parseFloat(e.target.value) })} /></div>
                         <div className="space-y-2"><Label>Reviews</Label><Input type="number" value={formData.google_reviews || 0} onChange={e => setFormData({ ...formData, google_reviews: parseInt(e.target.value) })} /></div>
                         <div className="space-y-2"><Label>Heart Rating</Label><Input type="number" step="0.1" value={formData.heart_rating || 0} onChange={e => setFormData({ ...formData, heart_rating: parseFloat(e.target.value) })} /></div>
                     </div>
-                    <div className="flex items-center space-x-2 pt-2">
-                        <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
-                        <Label htmlFor="exclusive">Exclusive Venue?</Label>
+                    <div className="flex items-center gap-6 pt-2">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
+                            <Label htmlFor="exclusive">Exclusive Venue?</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="featured" checked={formData.featured || false} onCheckedChange={c => setFormData({ ...formData, featured: c })} />
+                            <Label htmlFor="featured">Featured?</Label>
+                        </div>
                     </div>
                 </div>
             )
@@ -379,7 +433,8 @@ const AdminDashboard = () => {
                     </div>
                     <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Image URL (Photo)</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://..." /></div>
-                    <div className="space-y-2"><Label>Featuring (Vendor)</Label><Input value={formData.featuring || ''} onChange={e => setFormData({ ...formData, featuring: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Featuring (Text Highlight)</Label><Input value={formData.featuring || ''} onChange={e => setFormData({ ...formData, featuring: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Vendors List (comma separated)</Label><Textarea value={Array.isArray(formData.vendors) ? formData.vendors.join(', ') : (formData.vendors || '')} onChange={e => setFormData({ ...formData, vendors: e.target.value.split(',').map((t: string) => t.trim()) })} placeholder="Photographer: Click Chics, Florist: Petals..." /></div>
                     <div className="flex items-center space-x-2 pt-2">
                         <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
                         <Label htmlFor="exclusive">Exclusive Wedding?</Label>
@@ -416,6 +471,32 @@ const AdminDashboard = () => {
                         <div className="flex items-center space-x-2">
                             <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
                             <Label htmlFor="exclusive">Exclusive?</Label>
+                        </div>
+                    </div>
+                </div>
+            )
+        }
+        if (editorType === 'user') {
+            return (
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2"><Label>Full Name</Label><Input value={formData.full_name || ''} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Email</Label><Input value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Role</Label>
+                            <Select value={formData.role || 'couple'} onValueChange={v => setFormData({ ...formData, role: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['couple', 'business', 'admin'].map(r => <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2"><Label>Status</Label>
+                            <Select value={formData.status || 'active'} onValueChange={v => setFormData({ ...formData, status: v })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['active', 'inactive', 'banned'].map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </div>
@@ -655,6 +736,9 @@ const AdminDashboard = () => {
 
                 {/* --- USERS TAB --- */}
                 <TabsContent value="users">
+                    <div className="flex justify-end mb-4">
+                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('user')}><Plus className="w-4 h-4" /> Add User</Button>
+                    </div>
                     <Card><div className="rounded-md border">
                         <Table>
                             <TableHeader>
@@ -663,6 +747,7 @@ const AdminDashboard = () => {
                                     <TableHead>Role</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -676,6 +761,10 @@ const AdminDashboard = () => {
                                             <TableCell><Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>{u.role}</Badge></TableCell>
                                             <TableCell>{u.email}</TableCell>
                                             <TableCell><span className="text-green-600 text-xs font-bold uppercase">Active</span></TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('user', u)}><Edit className="w-4 h-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(u.id, 'user')}><Trash2 className="w-4 h-4" /></Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                             </TableBody>

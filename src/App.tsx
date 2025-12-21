@@ -9,10 +9,14 @@ import Index from "./pages/Index";
 import RealWeddings from "./pages/RealWeddings";
 import VendorsDirectory from "./pages/VendorsDirectory";
 import VenuesDirectory from "./pages/VenuesDirectory";
+import VendorDetail from "./pages/VendorDetail";
 import VenueDetail from "./pages/VenueDetail";
 import PlanningTips from "./pages/PlanningTips";
 import PlanningTipDetail from "./pages/PlanningTipDetail";
 import Auth from "./pages/Auth";
+import ListVenue from "./pages/ListVenue";
+import ListBusiness from "./pages/ListBusiness";
+import Partner from "./pages/Partner";
 import Profile from "./pages/Profile";
 import Budget from "./pages/Budget";
 import { VibeCheck } from "./components/VibeCheck";
@@ -43,11 +47,15 @@ const App = () => (
                 <Route path="/weddings" element={<RealWeddings />} />
                 <Route path="/vendors" element={<VendorsDirectory />} />
                 <Route path="/venues" element={<VenuesDirectory />} />
+                <Route path="/vendors/:id" element={<VendorDetail />} />
                 <Route path="/venues/:id" element={<VenueDetail />} />
                 <Route path="/tips" element={<PlanningTips />} />
                 <Route path="/tips/:id" element={<PlanningTipDetail />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/list-venue" element={<ListVenue />} />
+                <Route path="/join-vendor" element={<ListBusiness />} />
+                <Route path="/partner" element={<Partner />} />
                 <Route path="/style-matcher" element={
                   <div className="container mx-auto py-20">
                     <StyleSwipe />

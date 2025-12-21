@@ -11,17 +11,7 @@ const Index = () => {
       <main>
         <HeroSection />
 
-        {/* Quick Access for New Features */}
-        <section className="container mx-auto px-4 py-8">
-          <div className="flex flex-wrap gap-4 justify-center">
-            <a href="/budget" className="bg-rose-100 text-rose-800 px-6 py-3 rounded-full font-serif font-bold hover:bg-rose-200 transition">
-              💰 Budget Advisor
-            </a>
-            <a href="/style-matcher" className="bg-teal-100 text-teal-800 px-6 py-3 rounded-full font-serif font-bold hover:bg-teal-200 transition">
-              🎨 Style Swipe
-            </a>
-          </div>
-        </section>
+
 
         <FeaturedWeddings />
         <VendorCategories />

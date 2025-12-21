@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Search, Star, MapPin, Filter, X, Heart, Camera, Flower2, Music, UtensilsCrossed, Cake, Sparkles, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import wedding1 from "@/assets/wedding-1.jpg";
 import wedding2 from "@/assets/wedding-2.jpg";
 import wedding3 from "@/assets/wedding-3.jpg";
@@ -99,7 +98,6 @@ const VendorsDirectory = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
 
       {/* Hero Section */}
       <section className="pt-24 pb-12 md:pt-32 md:pb-16 bg-romantic">
@@ -240,55 +238,57 @@ const VendorsDirectory = () => {
                   className="group cursor-pointer"
                 >
                   <div className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300">
-                    {/* Image */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      <img
-                        src={vendor.image}
-                        alt={vendor.name}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      {vendor.featured && (
-                        <div className="absolute top-4 left-4">
-                          <span className="px-3 py-1.5 rounded-full bg-champagne text-primary-foreground text-xs font-medium">
-                            Featured
+                    <Link to={`/vendors/${vendor.id}`} className="block h-full">
+                      {/* Image */}
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        <img
+                          src={vendor.image}
+                          alt={vendor.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        {vendor.featured && (
+                          <div className="absolute top-4 left-4">
+                            <span className="px-3 py-1.5 rounded-full bg-champagne text-primary-foreground text-xs font-medium">
+                              Featured
+                            </span>
+                          </div>
+                        )}
+                        <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors">
+                          <Heart className="w-5 h-5 text-rose-gold" />
+                        </button>
+                        <div className="absolute bottom-4 left-4">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-sm text-sm font-medium text-foreground">
+                            <CategoryIcon className="w-4 h-4 text-primary" />
+                            {vendor.category}
                           </span>
                         </div>
-                      )}
-                      <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors">
-                        <Heart className="w-5 h-5 text-rose-gold" />
-                      </button>
-                      <div className="absolute bottom-4 left-4">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-sm text-sm font-medium text-foreground">
-                          <CategoryIcon className="w-4 h-4 text-primary" />
-                          {vendor.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-5">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-serif text-lg text-foreground font-medium group-hover:text-primary transition-colors">
-                          {vendor.name}
-                        </h3>
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {vendor.priceRange}
-                        </span>
                       </div>
 
-                      <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-3">
-                        <MapPin className="w-4 h-4" />
-                        {vendor.location}
-                      </p>
+                      {/* Content */}
+                      <div className="p-5">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-serif text-lg text-foreground font-medium group-hover:text-primary transition-colors">
+                            {vendor.name}
+                          </h3>
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {vendor.priceRange}
+                          </span>
+                        </div>
 
-                      <div className="flex items-center gap-1.5">
-                        <Star className="w-4 h-4 text-champagne fill-champagne" />
-                        <span className="font-medium text-foreground">{vendor.rating}</span>
-                        <span className="text-muted-foreground text-sm">
-                          ({vendor.reviews} reviews)
-                        </span>
+                        <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-3">
+                          <MapPin className="w-4 h-4" />
+                          {vendor.location}
+                        </p>
+
+                        <div className="flex items-center gap-1.5">
+                          <Star className="w-4 h-4 text-champagne fill-champagne" />
+                          <span className="font-medium text-foreground">{vendor.rating}</span>
+                          <span className="text-muted-foreground text-sm">
+                            ({vendor.reviews} reviews)
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   </div>
                 </motion.article>
               );

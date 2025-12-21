@@ -11,15 +11,12 @@ const footerLinks = {
   ],
   forProfessionals: [
     { name: "List Your Business", href: "/join-vendor" },
-    { name: "Submit a Wedding", href: "/submit" },
-    { name: "Advertising", href: "/advertise" },
+    { name: "List Your Venue", href: "/list-venue" },
     { name: "Partner With Us", href: "/partner" },
   ],
   company: [
     { name: "About Us", href: "/about" },
     { name: "Contact", href: "/contact" },
-    { name: "Careers", href: "/careers" },
-    { name: "Press", href: "/press" },
   ],
   legal: [
     { name: "Privacy Policy", href: "/privacy" },
