@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Test files
+test_*.js
+
+# Supabase temp files
+supabase/.temp/

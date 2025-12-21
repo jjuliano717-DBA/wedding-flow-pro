@@ -1,13 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Search, Star, MapPin, Filter, X, Heart, Camera, Flower2, Music, UtensilsCrossed, Cake, Sparkles, Users, Video } from "lucide-react";
+import { Search, Star, MapPin, Filter, X, Heart, Camera, Flower2, Music, UtensilsCrossed, Cake, Sparkles, Users, Video, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import wedding1 from "@/assets/wedding-1.jpg";
 import wedding2 from "@/assets/wedding-2.jpg";
 import wedding3 from "@/assets/wedding-3.jpg";
 import wedding4 from "@/assets/wedding-4.jpg";
+import { VerificationBadgeCompact } from "@/components/VerificationBadge";
+import { TrustScore, calculateTrustScore } from "@/lib/googlePlaces";
 
 const categoryIcons: Record<string, React.ElementType> = {
   "Photographer": Camera,
@@ -20,8 +24,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   "Videographer": Video,
 };
 
-import { supabase } from "@/lib/supabase"; // Ensure this import is added
-// ... imports
+import { supabase } from "@/lib/supabase";
 
 // Default fallback image if none provided
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
@@ -29,6 +32,28 @@ const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519741497674-611481863
 const categories = ["All Categories", "Photographer", "Florist", "DJ/Band", "Caterer", "Cake Designer", "Planner", "Hair & Makeup", "Videographer"];
 const locationsList = ["All Locations", "California", "New York", "Florida", "Illinois", "Tennessee", "Texas", "Washington", "Colorado", "Georgia", "Oregon", "Massachusetts"];
 const priceRanges = ["All Prices", "$", "$$", "$$$", "$$$$"];
+
+// Calculate trust score from vendor data (uses google_rating and google_reviews from DB)
+function calculateVendorTrustScore(vendor: any): TrustScore {
+  // If vendor has Google data, calculate trust score
+  if (vendor.google_rating && vendor.google_reviews) {
+    return calculateTrustScore({
+      placeId: vendor.google_business_url || '',
+      name: vendor.name,
+      rating: vendor.google_rating || 0,
+      userRatingsTotal: vendor.google_reviews || 0,
+      businessStatus: 'OPERATIONAL',
+      verified: !!vendor.google_business_url
+    });
+  }
+
+  // Return unverified if no Google data
+  return {
+    score: 0,
+    tier: 'unverified',
+    breakdown: { ratingScore: 0, reviewCountScore: 0, statusScore: 0 }
+  };
+}
 
 const VendorsDirectory = () => {
   const [vendors, setVendors] = useState<any[]>([]);
@@ -39,6 +64,7 @@ const VendorsDirectory = () => {
   const [selectedLocation, setSelectedLocation] = useState("All Locations");
   const [selectedPrice, setSelectedPrice] = useState("All Prices");
   const [showFilters, setShowFilters] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   // Fetch Vendors from Supabase
   useEffect(() => {
@@ -72,9 +98,12 @@ const VendorsDirectory = () => {
       // Price range not currently in DB, ignoring for now or mapping if added later
       const matchesPrice = selectedPrice === "All Prices";
 
-      return matchesSearch && matchesCategory && matchesLocation && matchesPrice;
+      // Verified filter: check if vendor has google_rating > 0
+      const matchesVerified = !verifiedOnly || (vendor.google_rating && vendor.google_rating > 0);
+
+      return matchesSearch && matchesCategory && matchesLocation && matchesPrice && matchesVerified;
     });
-  }, [vendors, searchQuery, selectedCategory, selectedLocation, selectedPrice]);
+  }, [vendors, searchQuery, selectedCategory, selectedLocation, selectedPrice, verifiedOnly]);
 
   // Transform DB data to UI format inside the map
   const displayVendors = filteredVendors.map(v => ({
@@ -83,7 +112,8 @@ const VendorsDirectory = () => {
     image: v.image_url || DEFAULT_IMAGE,
     rating: v.google_rating || 0,
     reviews: v.google_reviews || 0,
-    priceRange: "$$" // Default for now
+    priceRange: "$$", // Default for now
+    trustScore: calculateVendorTrustScore(v)
   }));
 
 
@@ -92,9 +122,10 @@ const VendorsDirectory = () => {
     setSelectedLocation("All Locations");
     setSelectedPrice("All Prices");
     setSearchQuery("");
+    setVerifiedOnly(false);
   };
 
-  const hasActiveFilters = selectedCategory !== "All Categories" || selectedLocation !== "All Locations" || selectedPrice !== "All Prices" || searchQuery !== "";
+  const hasActiveFilters = selectedCategory !== "All Categories" || selectedLocation !== "All Locations" || selectedPrice !== "All Prices" || searchQuery !== "" || verifiedOnly;
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,6 +199,19 @@ const VendorsDirectory = () => {
               <Filter className="w-4 h-4" />
               More Filters
             </Button>
+
+            {/* Verified Only Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="verified-only"
+                checked={verifiedOnly}
+                onCheckedChange={setVerifiedOnly}
+              />
+              <Label htmlFor="verified-only" className="text-sm flex items-center gap-1.5 cursor-pointer">
+                <ShieldCheck className="w-4 h-4 text-amber-500" />
+                Verified only
+              </Label>
+            </div>
 
             {showFilters && (
               <>
@@ -253,6 +297,12 @@ const VendorsDirectory = () => {
                             </span>
                           </div>
                         )}
+                        {/* Verification Badge */}
+                        {vendor.trustScore.tier !== 'unverified' && (
+                          <div className="absolute top-4 left-4" style={{ left: vendor.featured ? '90px' : '16px' }}>
+                            <VerificationBadgeCompact trustScore={vendor.trustScore} />
+                          </div>
+                        )}
                         <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors">
                           <Heart className="w-5 h-5 text-rose-gold" />
                         </button>
@@ -310,3 +360,4 @@ const VendorsDirectory = () => {
 };
 
 export default VendorsDirectory;
+

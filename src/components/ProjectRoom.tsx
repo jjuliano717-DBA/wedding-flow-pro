@@ -15,14 +15,45 @@ type Task = {
     status: 'todo' | 'in-progress' | 'done';
 };
 
+const STORAGE_KEY = 'wedding_project_tasks';
+
+// Load tasks from localStorage
+const loadStoredTasks = (): Task[] => {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+};
+
+// Save tasks to localStorage
+const saveStoredTasks = (tasks: Task[]) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+};
+
 export function ProjectRoom() {
     const { user } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
+    const [useLocalStorage, setUseLocalStorage] = useState(false);
 
     useEffect(() => {
         if (user) fetchTasks();
+        else {
+            // Not logged in - use localStorage
+            setTasks(loadStoredTasks());
+            setLoading(false);
+            setUseLocalStorage(true);
+        }
     }, [user]);
+
+    // Sync to localStorage when using localStorage mode
+    useEffect(() => {
+        if (useLocalStorage) {
+            saveStoredTasks(tasks);
+        }
+    }, [tasks, useLocalStorage]);
 
     const fetchTasks = async () => {
         try {
@@ -31,10 +62,19 @@ export function ProjectRoom() {
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // Table might not exist - fall back to localStorage
+                console.warn('Tasks table not available, using localStorage');
+                setTasks(loadStoredTasks());
+                setUseLocalStorage(true);
+                return;
+            }
             setTasks(data || []);
         } catch (error) {
             console.error(error);
+            // Fall back to localStorage
+            setTasks(loadStoredTasks());
+            setUseLocalStorage(true);
         } finally {
             setLoading(false);
         }
@@ -42,7 +82,19 @@ export function ProjectRoom() {
 
     const handleAddTask = async (status: 'todo' | 'in-progress' | 'done') => {
         const title = prompt("Enter task name:");
-        if (!title || !user) return;
+        if (!title) return;
+
+        // Use localStorage mode
+        if (useLocalStorage || !user) {
+            const newTask: Task = {
+                id: Date.now(),
+                title,
+                status
+            };
+            setTasks([newTask, ...tasks]);
+            toast.success("Task added!");
+            return;
+        }
 
         try {
             const { data, error } = await supabase
@@ -61,7 +113,15 @@ export function ProjectRoom() {
             toast.success("Task added!");
         } catch (error) {
             console.error(error);
-            toast.error("Failed to add task");
+            // Fall back to localStorage add
+            const newTask: Task = {
+                id: Date.now(),
+                title,
+                status
+            };
+            setTasks([newTask, ...tasks]);
+            setUseLocalStorage(true);
+            toast.success("Task added (saved locally)");
         }
     };
 

@@ -19,7 +19,7 @@ import ListBusiness from "./pages/ListBusiness";
 import Partner from "./pages/Partner";
 import Profile from "./pages/Profile";
 import Budget from "./pages/Budget";
-import { VibeCheck } from "./components/VibeCheck";
+import { GlobalAIAssistant } from "./components/GlobalAIAssistant";
 import { StyleSwipe } from "./components/StyleSwipe";
 import Planner from "./pages/Planner";
 import BusinessDashboard from "./pages/BusinessDashboard";
@@ -88,7 +88,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
-            <VibeCheck />
+            <GlobalAIAssistant />
           </BrowserRouter>
         </TooltipProvider>
       </GamificationProvider>

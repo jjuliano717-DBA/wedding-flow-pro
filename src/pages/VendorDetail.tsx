@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, MapPin, Heart, ArrowLeft, Globe, Mail, Check, Share2, Instagram, Facebook } from "lucide-react";
+import { Star, MapPin, Heart, ArrowLeft, Globe, Mail, Check, Share2, Instagram, Facebook, ShieldCheck, ExternalLink, TrendingUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { VerificationBadge } from "@/components/VerificationBadge";
+import { TrustScore, calculateTrustScore } from "@/lib/googlePlaces";
+import { Progress } from "@/components/ui/progress";
+import { sendInquiryEmails } from "@/lib/emailService";
+import { useAuth } from "@/context/AuthContext";
 
 interface Vendor {
     id: string;
@@ -23,13 +28,57 @@ interface Vendor {
     heart_rating: number;
     exclusive: boolean;
     image_url: string;
+    google_business_url?: string;
+}
+
+// Calculate trust score from vendor data
+function calculateVendorTrustScore(vendor: Vendor): TrustScore {
+    if (vendor.google_rating && vendor.google_reviews) {
+        return calculateTrustScore({
+            placeId: vendor.google_business_url || '',
+            name: vendor.name,
+            rating: vendor.google_rating || 0,
+            userRatingsTotal: vendor.google_reviews || 0,
+            businessStatus: 'OPERATIONAL',
+            verified: !!vendor.google_business_url
+        });
+    }
+    return {
+        score: 0,
+        tier: 'unverified',
+        breakdown: { ratingScore: 0, reviewCountScore: 0, statusScore: 0 }
+    };
 }
 
 const VendorDetail = () => {
     const { id } = useParams();
+    const { user } = useAuth();
     const [vendor, setVendor] = useState<Vendor | null>(null);
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState({
+        fname: '',
+        lname: '',
+        email: '',
+        date: '',
+        message: ''
+    });
+
+    // Pre-fill email if user is logged in
+    useEffect(() => {
+        if (user?.email) {
+            setFormData(prev => ({ ...prev, email: user.email || '' }));
+        }
+        if (user?.fullName) {
+            const [fname, ...lnameArr] = user.fullName.split(' ');
+            setFormData(prev => ({
+                ...prev,
+                fname: fname || '',
+                lname: lnameArr.join(' ') || ''
+            }));
+        }
+    }, [user]);
 
     useEffect(() => {
         const fetchVendor = async () => {
@@ -87,6 +136,8 @@ const VendorDetail = () => {
         );
     }
 
+    const trustScore = calculateVendorTrustScore(vendor);
+
     return (
         <div className="min-h-screen bg-background flex flex-col animate-fade-in">
             <div className="container mx-auto px-4 max-w-6xl py-8">
@@ -97,9 +148,12 @@ const VendorDetail = () => {
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 border-b pb-8">
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <Badge variant="secondary" className="text-sm font-normal">{vendor.type}</Badge>
                             {vendor.exclusive && <Badge className="bg-rose-100 text-rose-600 hover:bg-rose-200">Exclusive Partner</Badge>}
+                            {trustScore.tier !== 'unverified' && (
+                                <VerificationBadge trustScore={trustScore} size="sm" />
+                            )}
                         </div>
                         <h1 className="font-serif text-4xl md:text-5xl text-foreground mb-4">{vendor.name}</h1>
                         <div className="flex flex-wrap items-center gap-4 text-sm md:text-base">
@@ -147,6 +201,97 @@ const VendorDetail = () => {
                             <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{vendor.description || "No description provided."}</p>
                         </section>
 
+                        {/* Google Verification Section */}
+                        {trustScore.tier !== 'unverified' && (
+                            <section className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 md:p-8 border border-amber-100">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
+                                        <ShieldCheck className="w-6 h-6 text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-serif text-xl">Google Verified Business</h3>
+                                        <p className="text-sm text-muted-foreground">Trust score based on Google Business data</p>
+                                    </div>
+                                </div>
+
+                                {/* Trust Score Display */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div className="bg-white rounded-xl p-4 shadow-sm">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium">Overall Trust Score</span>
+                                            <span className="text-2xl font-bold text-amber-600">{trustScore.score}/100</span>
+                                        </div>
+                                        <Progress value={trustScore.score} className="h-2" />
+                                    </div>
+                                    <div className="bg-white rounded-xl p-4 shadow-sm">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Rating Score</span>
+                                                <span className="font-medium">{trustScore.breakdown.ratingScore}/40</span>
+                                            </div>
+                                            <Progress value={(trustScore.breakdown.ratingScore / 40) * 100} className="h-1.5" />
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Review Volume</span>
+                                                <span className="font-medium">{trustScore.breakdown.reviewCountScore}/40</span>
+                                            </div>
+                                            <Progress value={(trustScore.breakdown.reviewCountScore / 40) * 100} className="h-1.5" />
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Business Status</span>
+                                                <span className="font-medium">{trustScore.breakdown.statusScore}/20</span>
+                                            </div>
+                                            <Progress value={(trustScore.breakdown.statusScore / 20) * 100} className="h-1.5" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Why We Trust Section */}
+                                <div className="bg-white rounded-xl p-4 shadow-sm">
+                                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-green-600" />
+                                        Why We Trust This Vendor
+                                    </h4>
+                                    <ul className="text-sm text-muted-foreground space-y-2">
+                                        {vendor.google_rating >= 4.5 && (
+                                            <li className="flex items-center gap-2">
+                                                <Check className="w-4 h-4 text-green-500" />
+                                                Excellent rating ({vendor.google_rating} stars)
+                                            </li>
+                                        )}
+                                        {vendor.google_reviews >= 50 && (
+                                            <li className="flex items-center gap-2">
+                                                <Check className="w-4 h-4 text-green-500" />
+                                                Strong review volume ({vendor.google_reviews}+ reviews)
+                                            </li>
+                                        )}
+                                        <li className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-green-500" />
+                                            Verified active business on Google
+                                        </li>
+                                        {vendor.exclusive && (
+                                            <li className="flex items-center gap-2">
+                                                <Check className="w-4 h-4 text-green-500" />
+                                                Vetted exclusive partner
+                                            </li>
+                                        )}
+                                    </ul>
+                                </div>
+
+                                {vendor.google_business_url && (
+                                    <div className="mt-4">
+                                        <a
+                                            href={vendor.google_business_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 hover:underline"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                            View on Google Business
+                                        </a>
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
                         {/* Details Grid */}
                         <section className="bg-slate-50 rounded-2xl p-6 md:p-8">
                             <h3 className="font-serif text-xl mb-6">Service Details</h3>
@@ -179,7 +324,6 @@ const VendorDetail = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    {/* Additional dynamic details could go here */}
                                     <div className="flex items-start gap-3">
                                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
                                             <Check className="w-4 h-4 text-rose-gold" />
@@ -204,31 +348,109 @@ const VendorDetail = () => {
                                     <p className="text-sm text-muted-foreground">Get in touch with {vendor.name} securely.</p>
                                 </div>
 
-                                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); toast.success("Inquiry sent!"); }}>
+                                <form className="space-y-4" onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    if (!vendor) return;
+
+                                    setSubmitting(true);
+                                    try {
+                                        const contactName = `${formData.fname} ${formData.lname}`.trim();
+
+                                        // Save inquiry to database
+                                        const { error: dbError } = await supabase
+                                            .from('inquiries')
+                                            .insert({
+                                                vendor_id: vendor.id,
+                                                contact_name: contactName,
+                                                contact_email: formData.email,
+                                                event_date: formData.date || null,
+                                                message: formData.message || `Interested in learning more about ${vendor.name}'s services.`,
+                                                user_id: user?.id || null,
+                                            });
+
+                                        if (dbError) throw dbError;
+
+                                        // Send email notifications (non-blocking)
+                                        sendInquiryEmails({
+                                            vendorName: vendor.name,
+                                            vendorEmail: vendor.website ? `contact@${new URL(vendor.website).hostname}` : 'notifications@2planawedding.com',
+                                            contactName,
+                                            contactEmail: formData.email,
+                                            eventDate: formData.date,
+                                            message: formData.message,
+                                        }).catch(console.error);
+
+                                        toast.success("Inquiry sent! You'll hear back within 24-48 hours.");
+                                        setFormData({ fname: '', lname: '', email: '', date: '', message: '' });
+                                    } catch (error) {
+                                        console.error('Inquiry error:', error);
+                                        toast.error("Failed to send inquiry. Please try again.");
+                                    } finally {
+                                        setSubmitting(false);
+                                    }
+                                }}>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1">
                                             <Label htmlFor="fname">First Name</Label>
-                                            <Input id="fname" placeholder="Jane" required />
+                                            <Input
+                                                id="fname"
+                                                placeholder="Jane"
+                                                required
+                                                value={formData.fname}
+                                                onChange={(e) => setFormData({ ...formData, fname: e.target.value })}
+                                            />
                                         </div>
                                         <div className="space-y-1">
                                             <Label htmlFor="lname">Last Name</Label>
-                                            <Input id="lname" placeholder="Doe" required />
+                                            <Input
+                                                id="lname"
+                                                placeholder="Doe"
+                                                required
+                                                value={formData.lname}
+                                                onChange={(e) => setFormData({ ...formData, lname: e.target.value })}
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="email">Email</Label>
-                                        <Input id="email" type="email" placeholder="jane@example.com" required />
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="jane@example.com"
+                                            required
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="date">Wedding Date</Label>
-                                        <Input id="date" type="date" />
+                                        <Input
+                                            id="date"
+                                            type="date"
+                                            value={formData.date}
+                                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="message">Message</Label>
-                                        <Textarea id="message" placeholder={`Hi ${vendor.name}, we love your work...`} className="min-h-[100px]" />
+                                        <Textarea
+                                            id="message"
+                                            placeholder={`Hi ${vendor.name}, we love your work...`}
+                                            className="min-h-[100px]"
+                                            value={formData.message}
+                                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                        />
                                     </div>
-                                    <Button type="submit" className="w-full bg-rose-gold hover:bg-rose-600 text-white font-medium py-6">
-                                        Send Inquiry
+                                    <Button
+                                        type="submit"
+                                        className="w-full bg-rose-gold hover:bg-rose-600 text-white font-medium py-6"
+                                        disabled={submitting}
+                                    >
+                                        {submitting ? (
+                                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                                        ) : (
+                                            'Send Inquiry'
+                                        )}
                                     </Button>
                                     <p className="text-xs text-center text-muted-foreground mt-4">
                                         You'll receive a response within 24-48 hours. By clicking send, you agree to our Terms.
@@ -244,3 +466,4 @@ const VendorDetail = () => {
 };
 
 export default VendorDetail;
+

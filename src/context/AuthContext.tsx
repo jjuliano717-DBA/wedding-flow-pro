@@ -26,6 +26,11 @@ export interface User {
     stressLevel?: number;
     stylePreferences?: any; // Record<string, any> for complex profiles
 
+    // Wedding Planning Fields
+    weddingDate?: string;
+    guestCount?: number;
+    planningPace?: 'relaxed' | 'moderate' | 'aggressive';
+
     // Role & Business Fields
     role: UserRole;
     businessProfile?: {
@@ -105,7 +110,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     avatarUrl: data.avatar_url,
                     budgetTier: data.budget_tier,
                     stressLevel: data.stress_level,
-                    stylePreferences: data.style_preferences
+                    stylePreferences: data.style_preferences,
+                    weddingDate: data.wedding_date,
+                    guestCount: data.guest_count,
+                    planningPace: data.planning_pace,
                 });
             }
         } catch (e) {
@@ -182,6 +190,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (updatedData.budgetTier) updates.budget_tier = updatedData.budgetTier;
             if (updatedData.stressLevel) updates.stress_level = updatedData.stressLevel;
             if (updatedData.stylePreferences) updates.style_preferences = updatedData.stylePreferences;
+            if (updatedData.weddingDate) updates.wedding_date = updatedData.weddingDate;
+            if (updatedData.guestCount) updates.guest_count = updatedData.guestCount;
+            if (updatedData.planningPace) updates.planning_pace = updatedData.planningPace;
 
             const { error } = await supabase.from('users').upsert(updates);
 

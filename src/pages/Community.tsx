@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageSquare, Users, Hash, Send, Trophy, Heart, Reply, ArrowLeft, Clock, Loader2 } from "lucide-react";
 import { useGamification } from "@/context/GamificationContext";
-import { AIPlanningBuddy } from "@/components/AIPlanningBuddy";
+
 import { ProjectRoom } from "@/components/ProjectRoom";
 import { CatchUpSummary } from "@/components/CatchUpSummary";
 import { Progress } from "@/components/ui/progress";
@@ -224,13 +224,7 @@ export default function Community() {
         }
     };
 
-    // AI Buddy Integration
-    const aiMessages = selectedThread
-        ? [
-            { id: 0, user: selectedThread.user_name || 'User', text: `${selectedThread.title} ${selectedThread.note}` },
-            ...replies.map(r => ({ id: r.id, user: r.user_name || 'User', text: r.text }))
-        ]
-        : [];
+
 
     const handleLike = (threadId: number, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -413,10 +407,7 @@ export default function Community() {
                                             <p className="text-slate-800 leading-relaxed whitespace-pre-wrap">{selectedThread?.note}</p>
                                         </div>
 
-                                        {/* AI Buddy Overlay In Thread */}
-                                        <div className="relative">
-                                            <AIPlanningBuddy messages={aiMessages} />
-                                        </div>
+
 
                                         <div className="px-4 pb-4 space-y-4">
                                             <h4 className="text-sm font-bold text-muted-foreground uppercase px-2">Replies</h4>
