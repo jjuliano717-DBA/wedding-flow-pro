@@ -60,7 +60,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // --- Types (Matching DB Schema) ---
-type UserRole = 'couple' | 'business' | 'admin';
+type UserRole = 'couple' | 'vendor' | 'planner' | 'venue' | 'admin';
 
 interface AdminUser {
     id: string;
@@ -486,7 +486,7 @@ const AdminDashboard = () => {
                             <Select value={formData.role || 'couple'} onValueChange={v => setFormData({ ...formData, role: v })}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    {['couple', 'business', 'admin'].map(r => <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>)}
+                                    {['couple', 'vendor', 'planner', 'venue', 'admin'].map(r => <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

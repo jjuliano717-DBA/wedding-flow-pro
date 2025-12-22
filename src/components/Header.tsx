@@ -315,9 +315,9 @@ export const Header = () => {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to={user?.role === 'business' ? "/business" : "/planner"} className="cursor-pointer font-semibold">
+                      <Link to={['vendor', 'planner', 'venue'].includes(user?.role || '') ? "/business" : "/planner"} className="cursor-pointer font-semibold">
                         <Briefcase className="mr-2 h-4 w-4" />
-                        <span>{user?.role === 'business' ? "Business Hub" : "My Planner"}</span>
+                        <span>{['vendor', 'planner', 'venue'].includes(user?.role || '') ? "Business Hub" : "My Planner"}</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>

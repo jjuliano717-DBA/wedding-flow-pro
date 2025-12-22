@@ -99,7 +99,24 @@ WHERE image_url IS NULL
    OR image_url NOT LIKE 'https://images.unsplash.com%';
 
 -- =====================================================
--- PART 2: ADD MISSING COLUMNS TO USERS TABLE
+-- PART 2: USER ROLES MIGRATION
+-- =====================================================
+-- Migrate 'business' role to 'vendor' 
+-- Add new roles: 'planner' and 'venue'
+
+-- Step 1: Drop the old constraint FIRST (must be before data update)
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_role_check;
+
+-- Step 2: Update existing 'business' users to 'vendor'
+UPDATE public.users SET role = 'vendor' WHERE role = 'business';
+
+-- Step 3: Add new constraint with updated roles
+ALTER TABLE public.users 
+ADD CONSTRAINT users_role_check 
+CHECK (role IN ('couple', 'vendor', 'planner', 'venue', 'admin'));
+
+-- =====================================================
+-- PART 3: ADD MISSING COLUMNS TO USERS TABLE
 -- =====================================================
 
 -- Add wedding planning fields for AI context

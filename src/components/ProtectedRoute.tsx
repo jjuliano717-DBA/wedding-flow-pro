@@ -23,7 +23,7 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     // If role restricted and user doesn't match
     if (allowedRoles && user && !allowedRoles.includes(user.role as UserRole)) {
         // Redirect to their appropriate dashboard based on their actual role
-        if (user.role === 'business') return <Navigate to="/business" replace />;
+        if (['vendor', 'planner', 'venue'].includes(user.role)) return <Navigate to="/business" replace />;
         return <Navigate to="/planner" replace />;
     }
 

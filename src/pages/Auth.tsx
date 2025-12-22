@@ -29,7 +29,7 @@ const signUpSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
   location: z.string().optional(),
-  role: z.enum(["couple", "business"], {
+  role: z.enum(["couple", "vendor", "planner", "venue"], {
     required_error: "Please select a role",
   }),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -95,7 +95,7 @@ const Auth = () => {
 
         if (role === 'admin') {
           navigate("/admin");
-        } else if (role === 'business') {
+        } else if (role === 'vendor' || role === 'planner' || role === 'venue') {
           navigate("/business");
         } else {
           navigate("/planner");
@@ -122,7 +122,7 @@ const Auth = () => {
       // Attempt immediate login/redirect if session is active
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        if (values.role === 'business') {
+        if (values.role === 'vendor' || values.role === 'planner' || values.role === 'venue') {
           navigate("/business");
         } else {
           navigate("/planner");
@@ -297,22 +297,38 @@ const Auth = () => {
                           <RadioGroup
                             onValueChange={field.onChange}
                             defaultValue={field.value}
-                            className="flex flex-col space-y-1"
+                            className="grid grid-cols-2 gap-2"
                           >
                             <FormItem className="flex items-center space-x-3 space-y-0">
                               <FormControl>
                                 <RadioGroupItem value="couple" />
                               </FormControl>
                               <FormLabel className="font-normal">
-                                Couple (Planning a wedding)
+                                Couple
                               </FormLabel>
                             </FormItem>
                             <FormItem className="flex items-center space-x-3 space-y-0">
                               <FormControl>
-                                <RadioGroupItem value="business" />
+                                <RadioGroupItem value="vendor" />
                               </FormControl>
                               <FormLabel className="font-normal">
-                                Vendor (Offering services)
+                                Vendor
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="planner" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Planner
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="venue" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Venue
                               </FormLabel>
                             </FormItem>
                           </RadioGroup>

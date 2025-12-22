@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 
-export type UserRole = 'couple' | 'business' | 'admin';
+export type UserRole = 'couple' | 'vendor' | 'planner' | 'venue' | 'admin';
 
 export interface User {
     id?: string; // Add ID for Supabase
