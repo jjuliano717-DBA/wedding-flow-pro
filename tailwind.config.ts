@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ['Playfair Display', 'serif'],
-        sans: ['Outfit', 'sans-serif'],
+        serif: ['"Playfair Display"', 'serif'],
+        sans: ['Inter', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -23,6 +23,12 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "brand-navy": "#0F172A",
+        "deep-rose": "#BE185D",
+        "dusty-rose": "#DCA1A1",
+        champagne: "#D4A373", // Warm gold/beige
+        "champagne-light": "#E9D5B9",
+        "brand-blush": "#FCE7F3",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -51,20 +57,6 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        blush: {
-          DEFAULT: "hsl(var(--blush))",
-          dark: "hsl(var(--blush-dark))",
-        },
-        champagne: {
-          DEFAULT: "hsl(var(--champagne))",
-          light: "hsl(var(--champagne-light))",
-        },
-        sage: {
-          DEFAULT: "hsl(var(--sage))",
-          light: "hsl(var(--sage-light))",
-        },
-        ivory: "hsl(var(--ivory))",
-        "rose-gold": "hsl(var(--rose-gold))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

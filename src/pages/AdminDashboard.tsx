@@ -20,7 +20,8 @@ import {
     FileText,
     Calendar,
     ShieldCheck,
-    Check
+    Check,
+    DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -217,6 +218,36 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleSetPassword = async (userId: string, email: string) => {
+        const newPassword = prompt(`Enter new password for ${email}:`);
+        if (!newPassword) return;
+
+        if (newPassword.length < 6) {
+            toast.error("Password must be at least 6 characters");
+            return;
+        }
+
+        try {
+            // Use Supabase RPC to update password
+            // Note: This requires a database function to be set up
+            const { error } = await supabase.rpc('admin_set_user_password', {
+                user_id: userId,
+                new_password: newPassword
+            });
+
+            if (error) throw error;
+
+            toast.success("Password updated successfully!", {
+                description: `New password set for ${email}`,
+            });
+        } catch (error: any) {
+            console.error(error);
+            toast.error("Password update failed", {
+                description: "You may need to set up the admin_set_user_password function in Supabase.",
+            });
+        }
+    };
+
     const handleOpenEditor = (type: EditorType, item?: any) => {
         setEditorType(type);
         setEditingId(item ? item.id : null);
@@ -249,18 +280,42 @@ const AdminDashboard = () => {
         try {
             let res;
             // Clean up formData to remove immutable fields or extra properties
-            const { id, created_at, ...cleanData } = formData;
+            const { id, created_at, ...rawCleanData } = formData;
+
+            let cleanData = rawCleanData;
+
+            // Special handling for users
+            if (editorType === 'user') {
+                // Remove fields that are typically managed by Auth or are derived
+                const { status, email, updated_at, ...userOnlyData } = rawCleanData;
+                cleanData = {
+                    ...userOnlyData,
+                    updated_at: new Date().toISOString()
+                };
+            }
 
             if (editingId) {
                 // Update
+                console.log(`Updating ${editorType} [${editingId}] with:`, cleanData);
                 res = await supabase.from(table).update(cleanData).eq('id', editingId).select();
             } else {
                 // Create
-                res = await supabase.from(table).insert(cleanData).select();
+                console.log(`Creating ${editorType} with:`, cleanData);
+                res = await supabase.from(table).insert([{ ...cleanData, id: undefined }]).select();
             }
 
 
-            if (res.error) throw res.error;
+            if (res.error) {
+                console.error(`Supabase error saving ${editorType}:`, res.error);
+                // Explicitly show the database error to the user
+                toast.error(`Database Error: ${res.error.message}`, {
+                    description: `Code: ${res.error.code}. Check console for details.`,
+                    duration: 10000,
+                });
+                throw res.error;
+            }
+
+            console.log(`Saved ${editorType} successfully:`, res.data);
 
             const savedItem = res.data[0];
 
@@ -480,7 +535,7 @@ const AdminDashboard = () => {
             return (
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2"><Label>Full Name</Label><Input value={formData.full_name || ''} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
-                    <div className="space-y-2"><Label>Email</Label><Input value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Email</Label><Input value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} disabled={!!editingId} /></div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Role</Label>
                             <Select value={formData.role || 'couple'} onValueChange={v => setFormData({ ...formData, role: v })}>
@@ -535,7 +590,85 @@ const AdminDashboard = () => {
                     <TabsTrigger value="weddings">Real Weddings</TabsTrigger>
                     <TabsTrigger value="tips">Planning Tips</TabsTrigger>
                     <TabsTrigger value="users">Users</TabsTrigger>
+                    <TabsTrigger value="metrics">Platform Metrics</TabsTrigger>
+                    <TabsTrigger value="disputes">Dispute Resolution</TabsTrigger>
                 </TabsList>
+
+                {/* --- METRICS TAB --- */}
+                <TabsContent value="metrics" className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {[
+                            { label: "Total Revenue", value: "$428.5k", icon: DollarSign, trend: "+12.4%", color: "text-green-600" },
+                            { label: "Monthly Growth", value: "24.8%", icon: TrendingUp, trend: "+2.1%", color: "text-blue-600" },
+                            { label: "Active Subscriptions", value: "1,240", icon: UserCheck, trend: "+85", color: "text-rose-gold" },
+                            { label: "Platform Trust Score", value: "98.2%", icon: ShieldCheck, trend: "+0.2%", color: "text-emerald-600" },
+                        ].map((stat) => (
+                            <Card key={stat.label} className="p-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className={`p-2 rounded-lg bg-slate-50 ${stat.color}`}>
+                                        <stat.icon className="w-5 h-5" />
+                                    </div>
+                                    <Badge variant="outline" className="text-xs font-bold text-green-600">
+                                        {stat.trend}
+                                    </Badge>
+                                </div>
+                                <h4 className="text-sm font-medium text-slate-500">{stat.label}</h4>
+                                <p className="text-2xl font-bold text-brand-navy mt-1">{stat.value}</p>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <Card className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-serif font-bold">Transaction History</h3>
+                            <Button variant="outline" size="sm">Export CSV</Button>
+                        </div>
+                        <div className="h-64 flex items-center justify-center bg-slate-50 rounded-xl border border-dashed text-slate-400 font-serif italic">
+                            Platform Revenue Visualization (Coming Soon)
+                        </div>
+                    </Card>
+                </TabsContent>
+
+                {/* --- DISPUTES TAB --- */}
+                <TabsContent value="disputes" className="space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-serif font-bold">Pending Disputes</h3>
+                        <Badge variant="secondary" className="bg-rose-100 text-rose-600">4 Active Cases</Badge>
+                    </div>
+
+                    <Card>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Case ID</TableHead>
+                                    <TableHead>Reporter</TableHead>
+                                    <TableHead>Respondent</TableHead>
+                                    <TableHead>Issue</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[
+                                    { id: "DIS-9421", reporter: "Sarah M.", respondent: "Beachside Bliss", issue: "Deposit Refund", status: "Open" },
+                                    { id: "DIS-9382", reporter: "Elegant Blooms", respondent: "The Grand Villa", issue: "Access Dispute", status: "In Progress" },
+                                    { id: "DIS-9210", reporter: "Mike & Jane", respondent: "Snap Happy Pros", issue: "Cancellation", status: "Under Review" },
+                                ].map((d) => (
+                                    <TableRow key={d.id}>
+                                        <TableCell className="font-mono text-xs">{d.id}</TableCell>
+                                        <TableCell className="font-medium">{d.reporter}</TableCell>
+                                        <TableCell>{d.respondent}</TableCell>
+                                        <TableCell>{d.issue}</TableCell>
+                                        <TableCell><Badge variant="secondary" className="bg-amber-100 text-amber-700">{d.status}</Badge></TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="sm" className="text-rose-gold font-bold">Review Case</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Card>
+                </TabsContent>
 
                 {/* --- DIALOG --- */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -763,6 +896,15 @@ const AdminDashboard = () => {
                                             <TableCell><span className="text-green-600 text-xs font-bold uppercase">Active</span></TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('user', u)}><Edit className="w-4 h-4" /></Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-blue-600 hover:text-blue-700"
+                                                    onClick={() => handleSetPassword(u.id, u.email)}
+                                                    title="Set new password"
+                                                >
+                                                    <Mail className="w-4 h-4" />
+                                                </Button>
                                                 <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(u.id, 'user')}><Trash2 className="w-4 h-4" /></Button>
                                             </TableCell>
                                         </TableRow>

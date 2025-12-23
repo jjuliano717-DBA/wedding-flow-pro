@@ -5,6 +5,9 @@ import { Menu, X, Heart, Search, User, LogOut, Briefcase, ChevronRight } from "l
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "@/components/ThemeProvider";
+import { Logo } from "@/components/Logo";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,11 +34,12 @@ const navLinks = [
   { name: "Venues", href: "/venues" },
   { name: "Planning Tips", href: "/tips" },
   { name: "Real Weddings", href: "/weddings" },
-  { name: "Community Chat", href: "/community" },
 ];
 
 export const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const { theme, toggleTheme, isProMode } = useTheme();
+
 
   // Filter nav links based on role
   const visibleNavLinks = navLinks.filter(link => {
@@ -69,41 +73,58 @@ export const Header = () => {
                 {/* Navigation Links with Chevrons */}
                 <div className="flex-1 overflow-y-auto">
                   <nav className="flex flex-col">
-                    {/* Planner link for logged-in couples/admins */}
+                    {/* Planner section for logged-in couples/admins */}
                     {showPlanner && (
-                      <SheetClose asChild>
-                        <Link
-                          to="/planner"
-                          className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors"
-                        >
-                          <span className="font-medium">The Planner</span>
-                          <ChevronRight className="w-5 h-5 text-slate-400" />
-                        </Link>
-                      </SheetClose>
-                    )}
-
-                    {/* My Style */}
-                    <SheetClose asChild>
-                      <Link
-                        to="/style-matcher"
-                        className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors"
-                      >
-                        <span className="font-medium">My Style</span>
-                        <ChevronRight className="w-5 h-5 text-slate-400" />
-                      </Link>
-                    </SheetClose>
-
-                    {/* Budget for logged-in users */}
-                    {showPlanner && (
-                      <SheetClose asChild>
-                        <Link
-                          to="/budget"
-                          className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors"
-                        >
-                          <span className="font-medium">Budget Advisor</span>
-                          <ChevronRight className="w-5 h-5 text-slate-400" />
-                        </Link>
-                      </SheetClose>
+                      <div className="bg-slate-50/50 pb-2">
+                        <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          Wedding Planner
+                        </div>
+                        <SheetClose asChild>
+                          <Link
+                            to="/planner"
+                            className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors"
+                          >
+                            <span className="font-medium text-rose-gold">The Planner Dashboard</span>
+                            <ChevronRight className="w-5 h-5 text-slate-400" />
+                          </Link>
+                        </SheetClose>
+                        <SheetClose asChild>
+                          <Link
+                            to="/discover"
+                            className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors pl-8"
+                          >
+                            <span className="font-medium">Inspiration Discover</span>
+                            <ChevronRight className="w-5 h-5 text-slate-400" />
+                          </Link>
+                        </SheetClose>
+                        <SheetClose asChild>
+                          <Link
+                            to="/style-matcher"
+                            className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors pl-8"
+                          >
+                            <span className="font-medium">My Style</span>
+                            <ChevronRight className="w-5 h-5 text-slate-400" />
+                          </Link>
+                        </SheetClose>
+                        <SheetClose asChild>
+                          <Link
+                            to="/community"
+                            className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors pl-8"
+                          >
+                            <span className="font-medium">Community Chat</span>
+                            <ChevronRight className="w-5 h-5 text-slate-400" />
+                          </Link>
+                        </SheetClose>
+                        <SheetClose asChild>
+                          <Link
+                            to="/budget"
+                            className="flex items-center justify-between px-4 py-4 border-b hover:bg-slate-50 transition-colors pl-8"
+                          >
+                            <span className="font-medium">Budget Advisor</span>
+                            <ChevronRight className="w-5 h-5 text-slate-400" />
+                          </Link>
+                        </SheetClose>
+                      </div>
                     )}
 
                     {/* Main nav links */}
@@ -170,21 +191,17 @@ export const Header = () => {
             </Sheet>
 
             {/* Logo next to menu button */}
-            <Link to="/" className="flex items-center gap-1.5">
-              <Heart className="w-5 h-5 text-rose-gold fill-rose-gold" />
-              <span className="font-serif text-lg font-semibold text-foreground whitespace-nowrap">
-                2Plan<span className="text-primary">A</span>Wedding
-              </span>
+            <Link to="/" className="flex items-center">
+              <Logo className="h-6" />
             </Link>
           </div>
 
+
           {/* Desktop: Logo on left */}
-          <Link to="/" className="hidden lg:flex items-center gap-2 mr-8">
-            <Heart className="w-6 h-6 text-rose-gold fill-rose-gold" />
-            <span className="font-serif text-xl md:text-2xl font-semibold text-foreground whitespace-nowrap">
-              2Plan<span className="text-primary">A</span>Wedding
-            </span>
+          <Link to="/" className="hidden lg:flex items-center mr-8">
+            <Logo className="h-10" />
           </Link>
+
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex flex-1 justify-center">
@@ -222,6 +239,18 @@ export const Header = () => {
                           <Link to="/budget" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                             <div className="text-sm font-medium leading-none">Budget Advisor</div>
                             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Track spend & hidden fees.</p>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/discover" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                            <div className="text-sm font-medium leading-none">Inspiration Discover</div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Swipe to find your wedding vibe and costs.</p>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/community" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                            <div className="text-sm font-medium leading-none">Community Chat</div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">Chat with other couples & experts.</p>
                           </Link>
                         </li>
                         <li>
@@ -273,8 +302,17 @@ export const Header = () => {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              className={isProMode ? "bg-brand-navy text-white border-brand-navy" : "bg-brand-blush text-deep-rose border-brand-blush"}
+            >
+              {isProMode ? "Switch to Couple View" : "Switch to Pro View"}
+            </Button>
             {!isAuthenticated ? (
+
               <>
                 <Button variant="ghost" size="icon">
                   <Search className="w-5 h-5" />

@@ -34,12 +34,12 @@ export const VibeCheck = ({ variant = 'floating' }: VibeCheckProps) => {
     const isHighStress = (user?.stressLevel || 0) > 7;
 
     const getStressIcon = () => {
-        if (stress <= 3) return <Smile className="w-5 h-5 text-green-500" />;
-        if (stress <= 7) return <div className="w-5 h-5 flex items-center justify-center text-lg">😐</div>;
+        if (stress <= 3) return <Smile className="w-6 h-6 text-green-500" />;
+        if (stress <= 7) return <div className="w-6 h-6 flex items-center justify-center text-xl">😐</div>;
         return (
             <div className="relative">
-                <Frown className="w-5 h-5 text-red-500" />
-                <Zap className="w-3 h-3 absolute -top-1 -right-1 fill-yellow-400 text-yellow-500" />
+                <Frown className="w-6 h-6 text-red-500" />
+                <Zap className="w-4 h-4 absolute -top-1 -right-1 fill-yellow-400 text-yellow-500" />
             </div>
         );
     };
@@ -101,7 +101,7 @@ export const VibeCheck = ({ variant = 'floating' }: VibeCheckProps) => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`relative h-9 w-9 rounded-full transition-all ${isHighStress ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-100'
+                        className={`relative h-11 w-11 rounded-full transition-all ${isHighStress ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-100'
                             }`}
                     >
                         {getStressIcon()}

@@ -28,11 +28,11 @@ export const HeroSection = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-champagne-light font-medium tracking-widest uppercase text-sm mb-4"
+            className="text-champagne-light font-medium tracking-widest uppercase text-[2rem] mb-4"
           >
             Discover Your Dream Wedding
           </motion.p>
-          
+
           <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl text-primary-foreground font-medium leading-tight mb-6">
             Where Love Stories
             <br />
@@ -45,7 +45,7 @@ export const HeroSection = () => {
             transition={{ delay: 0.4 }}
             className="text-primary-foreground/80 text-lg md:text-xl max-w-2xl mx-auto mb-10"
           >
-            Connect with top wedding vendors, discover stunning venues, and find 
+            Connect with top wedding vendors, discover stunning venues, and find
             inspiration from real weddings to plan your perfect day.
           </motion.p>
 
@@ -65,7 +65,7 @@ export const HeroSection = () => {
                   className="w-full h-12 pl-12 pr-4 rounded-lg bg-muted border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
-              
+
               <div className="flex gap-4">
                 <div className="relative flex-1 md:w-48">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -77,7 +77,7 @@ export const HeroSection = () => {
                     <option>Miami</option>
                   </select>
                 </div>
-                
+
                 <Button variant="champagne" size="lg" className="px-8">
                   Search
                 </Button>
@@ -86,6 +86,12 @@ export const HeroSection = () => {
 
             {/* Quick Filters */}
             <div className="flex flex-wrap gap-2 mt-4 justify-center">
+              <button
+                onClick={() => window.location.href = "/discover"}
+                className="px-4 py-1.5 rounded-full bg-rose-gold text-white text-sm hover:bg-rose-600 transition-colors font-bold shadow-sm"
+              >
+                ✨ Start Discovery Swipe
+              </button>
               {["Garden Wedding", "Beach Wedding", "Rustic Barn", "Luxury Ballroom", "Destination"].map((style) => (
                 <button
                   key={style}

@@ -53,7 +53,7 @@ const VenueDetail = () => {
             if (!id) return;
             try {
                 const { data, error } = await supabase
-                    .from('venues')
+                    .from('vendors')
                     .select('*')
                     .eq('id', id)
                     .single();
@@ -87,9 +87,10 @@ const VenueDetail = () => {
     }
 
     // Fallbacks
-    const images = venue.images && venue.images.length > 0 ? venue.images : [venue.image_url || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200"];
+    // Fallbacks
+    const images = venue.image_url ? [venue.image_url] : ["https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200"];
     const amenities = venue.amenities || ["Parking", "Restrooms", "Wheelchair Access", "WiFi", "Event Cleanup"];
-    const faqs = venue.faq || [
+    const faqs = venue.faqs || [
         { question: "What is included in the rental fee?", answer: "Tables, chairs, and basic linens are typically included." },
         { question: "Is there a preferred vendor list?", answer: "Yes, we work with a curated list of top-tier professionals." },
         { question: "Can we bring our own alcohol?", answer: "Alcohol policies vary by package. Please inquire for details." }
@@ -105,7 +106,7 @@ const VenueDetail = () => {
                     <div className="flex items-center text-sm text-muted-foreground">
                         <Link to="/venues" className="hover:text-primary transition-colors">Venues</Link>
                         <ChevronRight className="w-4 h-4 mx-2" />
-                        <span className="text-foreground font-medium">{venue.name}</span>
+                        <span className="text-foreground font-medium">{venue.business_name}</span>
                     </div>
                 </div>
 
@@ -179,7 +180,7 @@ const VenueDetail = () => {
                                 <span className="text-muted-foreground text-sm font-normal">({venue.google_reviews || 0} reviews)</span>
                             </div>
                             <span className="text-sm text-muted-foreground">
-                                {venue.type?.includes('Venue') ? venue.type : `${venue.type} Venue`}
+                                {venue.category ? (venue.category.includes('Venue') ? venue.category : `${venue.category} Venue`) : (venue.type?.includes('Venue') ? venue.type : `${venue.type} Venue`)}
                             </span>
                         </div>
                     </div>
@@ -187,12 +188,12 @@ const VenueDetail = () => {
                     <div className="flex flex-wrap gap-4 py-6 border-y border-border/50 mb-8">
                         <div className="flex items-center gap-2">
                             <Users className="w-5 h-5 text-primary" />
-                            <span className="font-medium">{venue.capacity} Guests</span>
+                            <span className="font-medium">{venue.guest_capacity ? `Up to ${venue.guest_capacity}` : 'N/A'} Guests</span>
                         </div>
                         <div className="w-px h-6 bg-border/50"></div>
                         <div className="flex items-center gap-2">
                             <DollarSign className="w-5 h-5 text-primary" />
-                            <span className="font-medium">{venue.price} Price Range</span>
+                            <span className="font-medium">{venue.price_range || "$$"} Price Range</span>
                         </div>
                         <div className="w-px h-6 bg-border/50"></div>
                         <div className="flex items-center gap-2">

@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { 
-  Camera, 
-  Flower2, 
-  Music, 
-  UtensilsCrossed, 
-  Cake, 
+import {
+  Camera,
+  Flower2,
+  Music,
+  UtensilsCrossed,
+  Cake,
   Sparkles,
   Users,
   Video,
@@ -43,7 +43,7 @@ export const VendorCategories = () => {
             Find Your Dream Team
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Browse thousands of verified wedding vendors, view their portfolios, 
+            Browse thousands of verified wedding vendors, view their portfolios,
             and connect directly to bring your vision to life.
           </p>
         </motion.div>
@@ -103,7 +103,7 @@ export const VendorCategories = () => {
           className="text-center mt-12"
         >
           <Link to="/vendors">
-            <Button variant="champagne" size="lg" className="gap-2">
+            <Button variant="outline" size="lg" className="gap-2">
               Browse All Vendors
               <ArrowRight className="w-4 h-4" />
             </Button>

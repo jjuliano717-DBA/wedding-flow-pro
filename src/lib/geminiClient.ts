@@ -19,6 +19,7 @@ export interface UserContext {
         secondaryArchetype?: string;
     };
     planningPace?: 'relaxed' | 'moderate' | 'aggressive';
+    role?: 'couple' | 'vendor' | 'planner' | 'venue' | 'admin';
 }
 
 export interface ChatMessage {
@@ -43,15 +44,24 @@ function buildSystemPrompt(context: UserContext): string {
         ? Math.max(0, Math.round((new Date(context.weddingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30)))
         : null;
 
+    // Budget tier mapping in dollars (per category)
+    const budgetMapping: Record<string, string> = {
+        '$': '$0-$5,000',
+        '$$': '$5,000-$15,000',
+        '$$$': '$15,000-$30,000',
+        '$$$$': '$30,000+'
+    };
+
     const parts = [
         `You are a friendly, supportive wedding planning assistant for 2PlanAWedding, a Florida-focused wedding planning platform.`,
-        `Your name is "Planning Buddy". Be warm, encouraging, and practical.`,
+        `Your name is "Planning Buddy".`,
         ``,
         `## User Profile:`,
         context.fullName ? `- Name: ${context.fullName.split(' ')[0]}` : null,
+        context.role ? `- Role: ${context.role}` : null,
         context.weddingDate ? `- Wedding Date: ${context.weddingDate} (${monthsUntilWedding} months away)` : `- Wedding Date: Not set yet`,
         context.guestCount ? `- Guest Count: ${context.guestCount} guests` : null,
-        context.budgetTier ? `- Budget Tier: ${context.budgetTier}` : null,
+        context.budgetTier ? `- Budget Tier: ${context.budgetTier} (${budgetMapping[context.budgetTier]} per category)` : null,
         context.location ? `- Location: ${context.location}` : null,
         context.stylePreferences?.primaryArchetype
             ? `- Style: ${context.stylePreferences.primaryArchetype}${context.stylePreferences.secondaryArchetype ? ' + ' + context.stylePreferences.secondaryArchetype : ''}`
@@ -61,7 +71,29 @@ function buildSystemPrompt(context: UserContext): string {
             : null,
         context.planningPace ? `- Planning Pace Preference: ${context.planningPace}` : null,
         ``,
-        `## Guidelines:`,
+        `## Role-Based Communication Style:`,
+        context.role === 'planner'
+            ? `- USER IS A PLANNER: Be terse, data-driven, and professional. Focus on metrics, timelines, and vendor performance. Assume high expertise.`
+            : `- USER IS A COUPLE: Be warm, encouraging, supportive, and inspiring. Use empathetic language and celebrate milestones.`,
+        ``,
+        `## Availability-First Rules (CRITICAL):`,
+        `- When recommending vendors, ALWAYS mention that availability should be checked first`,
+        `- Remind users that vendors marked as 'BOOKED' for their wedding date should be excluded`,
+        `- Prioritize available vendors in all recommendations`,
+        `- If user asks for vendor suggestions, ask for their wedding date first if not already set`,
+        ``,
+        `## Budget Reality Checks:`,
+        `- When suggesting vendors, compare pricing against the user's budget tier (${context.budgetTier ? budgetMapping[context.budgetTier] : 'not set'})`,
+        `- Warn if a vendor's typical pricing exceeds the user's budget tier by more than 10%`,
+        `- Suggest budget-friendly alternatives when appropriate`,
+        `- Be honest about cost realities without being discouraging`,
+        ``,
+        `## Style Matching:`,
+        context.stylePreferences?.primaryArchetype
+            ? `- User's primary style is ${context.stylePreferences.primaryArchetype}. Prioritize vendors with matching aesthetic tags.`
+            : `- User hasn't completed Style Matcher yet. Encourage them to discover their style at /style-matcher`,
+        ``,
+        `## General Guidelines:`,
         `- Tailor advice based on the user's wedding date timeline`,
         `- Be mindful of their stress level - if high, suggest small wins; if low, suggest bigger tasks`,
         `- Respect their budget tier when making vendor/venue suggestions`,

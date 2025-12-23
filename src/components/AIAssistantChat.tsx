@@ -38,6 +38,7 @@ export function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProps) {
         location: user?.location,
         stylePreferences: user?.stylePreferences,
         planningPace: user?.planningPace,
+        role: user?.role,
     };
 
     // Initialize with greeting when opened
@@ -166,8 +167,8 @@ export function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProps) {
                                     >
                                         <div
                                             className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${msg.role === 'user'
-                                                    ? 'bg-violet-500 text-white rounded-br-sm'
-                                                    : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                                                ? 'bg-violet-500 text-white rounded-br-sm'
+                                                : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                                                 }`}
                                         >
                                             <p className="text-sm leading-relaxed whitespace-pre-wrap">

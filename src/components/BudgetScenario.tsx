@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 // The full list of user-provided categories with typical ranges
 const DEFAULT_CATEGORIES = [
@@ -185,13 +186,30 @@ export function BudgetScenario({ id, name, defaultBudget = 30000, initialData, o
                                         <p className="text-xs text-muted-foreground">
                                             Range: ${cat.range[0].toLocaleString()} - ${cat.range[1].toLocaleString()}
                                         </p>
+                                        {cat.name === 'Catering' && (
+                                            <p className="text-[10px] text-rose-500 font-medium">
+                                                Includes est. 20% gratuity
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="text-right w-24">
+                                    <div className="text-right w-24 flex flex-col items-end gap-1">
                                         <Input
                                             className="h-8 text-right font-medium"
                                             value={currentAmount}
                                             onChange={e => handleAmountChange(cat.name, Number(e.target.value))}
                                         />
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-6 text-[10px] px-2 border-rose-200 text-rose-500 hover:bg-rose-50"
+                                            onClick={() => {
+                                                toast.success("Booking confirmed!", {
+                                                    description: `Successfully booked ${cat.name} for your event.`
+                                                });
+                                            }}
+                                        >
+                                            Book
+                                        </Button>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">

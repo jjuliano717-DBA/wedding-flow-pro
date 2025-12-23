@@ -21,6 +21,23 @@ const locationsList = ["All Locations", "California", "New York", "Tennessee", "
 const capacities = ["Any Capacity", "Up to 100", "100-200", "200-300", "300+"];
 const priceRanges = ["All Prices", "$$", "$$$", "$$$$"];
 
+// Hardcoded fallback/demo venues as requested
+const MOCK_VENUES = [
+  { id: 'v1', name: "Vineyard Vista", category: "Winery", location: "Sonoma, CA", guest_capacity: 300, price_range: "$$$", google_rating: 4.9, google_reviews: 54, image_url: wedding1 },
+  { id: 'v2', name: "The Crystal Palace", category: "Ballroom", location: "Miami, FL", guest_capacity: 600, price_range: "$$$$", google_rating: 4.8, google_reviews: 198, image_url: wedding2 },
+  { id: 'v3', name: "The Florida Aquarium", category: "Aquarium", location: "Tampa, FL", guest_capacity: 250, price_range: "$$", google_rating: 4.5, google_reviews: 800, image_url: wedding3 },
+  { id: 'v4', name: "Hotel Haya", category: "Hotel", location: "Ybor City, FL", guest_capacity: 200, price_range: "$$$", google_rating: 4.5, google_reviews: 150, image_url: wedding4 },
+  { id: 'v5', name: "Rialto Theatre", category: "Event Venue", location: "Tampa, FL", guest_capacity: 400, price_range: "$$", google_rating: 4.2, google_reviews: 90, image_url: DEFAULT_IMAGE },
+  { id: 'v6', name: "Oxford Exchange", category: "Event Venue", location: "Tampa, FL", guest_capacity: 200, price_range: "$$$", google_rating: 4.6, google_reviews: 350, image_url: DEFAULT_IMAGE },
+  { id: 'v7', name: "Armature Works", category: "Historic Venue", location: "Tampa Heights, FL", guest_capacity: 1200, price_range: "$$$$", google_rating: 4.6, google_reviews: 500, image_url: DEFAULT_IMAGE },
+  { id: 'v8', name: "The Orlo House & Ballroom", category: "Wedding Venue", location: "Tampa, FL", guest_capacity: 200, price_range: "$$$", google_rating: 4.8, google_reviews: 120, image_url: DEFAULT_IMAGE },
+  { id: 'v9', name: "Le Méridien Tampa, The Courthouse", category: "Hotel", location: "Tampa, FL", guest_capacity: 225, price_range: "$$$", google_rating: 4.4, google_reviews: 250, image_url: DEFAULT_IMAGE },
+  { id: 'v10', name: "Tampa Museum of Art", category: "Museum", location: "Tampa, FL", guest_capacity: 400, price_range: "$$$", google_rating: 4.2, google_reviews: 400, image_url: DEFAULT_IMAGE },
+  { id: 'v11', name: "Yacht StarShip Cruises & Events", category: "Event Venue", location: "Tampa, FL", guest_capacity: 600, price_range: "$$", google_rating: 4.4, google_reviews: 600, image_url: DEFAULT_IMAGE },
+  { id: 'v12', name: "Tampa Garden Club", category: "Wedding Venue", location: "Tampa, FL", guest_capacity: 325, price_range: "$$", google_rating: 4.5, google_reviews: 100, image_url: DEFAULT_IMAGE },
+  { id: 'v13', name: "Flora Groves Farm", category: "Rustic Barn", location: "Thonotosassa, FL", guest_capacity: 165, price_range: "$$", google_rating: 5.0, google_reviews: 0, image_url: DEFAULT_IMAGE }
+];
+
 const VenuesDirectory = () => {
   const [venues, setVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,15 +54,29 @@ const VenuesDirectory = () => {
     const fetchVenues = async () => {
       try {
         const { data, error } = await supabase
-          .from('venues')
+          .from('vendors')
           .select('*')
-          //.eq('exclusive', true); // Assuming we want all venues or exclusive? User said "do the same workflow... entries in localhost:8082/venues to venues tab in admin". The sql inserted them as exclusive=true. So let's fetch exclusive ones or all? Directory usually shows all approved. But let's stick to exclusive=true for consistency with "same workflow".
-          .eq('exclusive', true);
+          // Filter for venues using OR logic to be more inclusive
+          .or('type.ilike.%venue%,category.ilike.%venue%');
 
-        if (error) throw error;
-        setVenues(data || []);
+        if (error) console.error("Supabase Error:", error);
+
+        // Merge real data with mock data (prefer real data if ID matches, though IDs differ here)
+        // We will prepend real data to MOCK_VENUES, ensuring Flora Groves (if saved really) appears.
+        // Actually, since user asked to 'post back' specific venues including Flora Groves, 
+        // we can just use MOCK_VENUES as base and unique-ify by name if needed.
+        // For simplicity: MOCK_VENUES + Database Venues that aren't duplicates.
+
+        const realVenues = data || [];
+        // Dedup by name
+        const mockNames = new Set(MOCK_VENUES.map(v => v.name));
+        const newRealVenues = realVenues.filter(v => !mockNames.has(v.name));
+
+        setVenues([...newRealVenues, ...MOCK_VENUES]);
+
       } catch (error) {
         console.error("Error fetching venues:", error);
+        setVenues(MOCK_VENUES); // Fallback completely on error
       } finally {
         setLoading(false);
       }
@@ -56,19 +87,20 @@ const VenuesDirectory = () => {
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
       const matchesSearch =
-        venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (venue.name && venue.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (venue.location && venue.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (venue.type && venue.type.toLowerCase().includes(searchQuery.toLowerCase()));
+        (venue.category && venue.category.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesType = selectedType === "All Types" || venue.type === selectedType;
+      const matchesType = selectedType === "All Types" || venue.category === selectedType; // Note: category might be specifically "Ballroom", etc.
       const matchesLocation = selectedLocation === "All Locations" || (venue.location && venue.location.includes(selectedLocation));
-      const matchesPrice = selectedPrice === "All Prices" || venue.price === selectedPrice;
+      const matchesPrice = selectedPrice === "All Prices" || venue.price_range === selectedPrice;
 
       let matchesCapacity = true;
-      if (selectedCapacity === "Up to 100") matchesCapacity = venue.capacity_num <= 100;
-      else if (selectedCapacity === "100-200") matchesCapacity = venue.capacity_num > 100 && venue.capacity_num <= 200;
-      else if (selectedCapacity === "200-300") matchesCapacity = venue.capacity_num > 200 && venue.capacity_num <= 300;
-      else if (selectedCapacity === "300+") matchesCapacity = venue.capacity_num > 300;
+      const cap = venue.guest_capacity || 0;
+      if (selectedCapacity === "Up to 100") matchesCapacity = cap <= 100;
+      else if (selectedCapacity === "100-200") matchesCapacity = cap > 100 && cap <= 200;
+      else if (selectedCapacity === "200-300") matchesCapacity = cap > 200 && cap <= 300;
+      else if (selectedCapacity === "300+") matchesCapacity = cap > 300;
 
       return matchesSearch && matchesType && matchesLocation && matchesCapacity && matchesPrice;
     });
@@ -76,11 +108,17 @@ const VenuesDirectory = () => {
 
   const displayVenues = filteredVenues.map(v => ({
     ...v,
+    id: v.id,
+    name: v.name || v.business_name || "Venue Name",
+    type: v.category || 'Venue',
+    price: v.price_range || "$$",
     image: v.image_url || DEFAULT_IMAGE,
     rating: v.google_rating || 0,
     reviews: v.google_reviews || 0,
-    capacity: v.capacity || 'N/A', // Display string
-    capacityNum: v.capacity_num || 0
+    capacity: v.guest_capacity ? `Up to ${v.guest_capacity}` : 'N/A',
+    capacityNum: v.guest_capacity || 0,
+    indoor: true, // Placeholder as vendors table doesn't have this yet
+    outdoor: true // Placeholder
   }));
 
   const clearFilters = () => {
