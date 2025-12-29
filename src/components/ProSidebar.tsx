@@ -50,66 +50,46 @@ export const ProSidebar = () => {
             title: "ADMIN",
             items: [
                 { icon: Shield, label: "Admin Panel", href: "/admin" },
+                { icon: Users, label: "User Management", href: "/admin/users" },
+                { icon: Heart, label: "Platform Metrics", href: "/admin/metrics" },
             ]
         },
         {
-            title: "ALL",
+            title: "ALL ACCESS",
             items: [
                 { icon: Settings, label: "Settings", href: "/profile" },
             ]
         },
         {
-            title: "COUPLE",
+            title: "COUPLE PREVIEW",
             items: [
                 { icon: Palette, label: "Moodboard", href: "/moodboard" },
                 { icon: DollarSign, label: "Budget Advisor", href: "/budget" },
-                { icon: CheckSquare, label: "Planning Checklist", href: "/planner" },
                 { icon: Sparkles, label: "Style Matcher", href: "/style-matcher" },
-                { icon: BookOpen, label: "Black Book", href: "/black-book" },
-                { icon: Search, label: "Discover", href: "/discover" },
-                { icon: Camera, label: "Vendors", href: "/vendors" },
-                { icon: MapPin, label: "Venues", href: "/venues" },
-                { icon: Heart, label: "Real Weddings", href: "/weddings" },
-                { icon: BookOpen, label: "Planning Tips", href: "/tips" },
-                { icon: Users, label: "Community", href: "/community" },
-            ]
-        },
-        {
-            title: "VENDOR",
-            items: [
-                { icon: LayoutDashboard, label: "Dashboard", href: "/business" },
-                { icon: UserPlus, label: "Active Leads", href: "/leads" },
-                { icon: Calendar, label: "Calendar", href: "/calendar" },
-                { icon: ImageIcon, label: "My Assets", href: "/assets" },
-            ]
-        },
-        {
-            title: "VENUE",
-            items: [
-                { icon: LayoutDashboard, label: "Dashboard", href: "/business" },
-                { icon: UserPlus, label: "Active Leads", href: "/leads" },
-                { icon: Calendar, label: "Calendar", href: "/calendar" },
-                { icon: ImageIcon, label: "My Assets", href: "/assets" },
-            ]
-        },
-        {
-            title: "PLANNER",
-            items: [
-                { icon: Briefcase, label: "Planner Dashboard", href: "/planner" },
-                { icon: Users, label: "Clients", href: "/clients" },
-                { icon: Calendar, label: "Calendar", href: "/calendar" },
-                { icon: BookOpen, label: "Black Book", href: "/black-book" },
             ]
         }
     ] : [
         {
-            title: "",
+            title: "DASHBOARD",
             items: [
-                { icon: LayoutDashboard, label: "Dashboard", href: "/business" },
-                { icon: UserPlus, label: "Active Leads", href: "/leads" },
-                { icon: Calendar, label: "Calendar", href: "/calendar" },
-                { icon: ImageIcon, label: "My Assets", href: "/assets" },
-                { icon: Settings, label: "Settings", href: "/profile" },
+                { icon: LayoutDashboard, label: "Overview", href: "/business" },
+                { icon: UserPlus, label: "Active Leads", href: "/pro/leads" },
+            ]
+        },
+        {
+            title: "OPERATIONS",
+            items: [
+                { icon: Calendar, label: user?.role === 'venue' ? "Tour Scheduler" : "Calendar", href: "/pro/calendar" },
+                { icon: MessageSquare, label: "Inquiry Inbox", href: "/pro/leads" },
+                { icon: DollarSign, label: "Payments & Invoices", href: "/pro/finance" },
+                { icon: CheckSquare, label: "Legal Contracts", href: "/pro/contracts" },
+            ]
+        },
+        {
+            title: "CONTENT",
+            items: [
+                { icon: ImageIcon, label: "My Assets", href: "/pro/assets" },
+                { icon: Settings, label: "Profile", href: "/profile" },
             ]
         }
     ];

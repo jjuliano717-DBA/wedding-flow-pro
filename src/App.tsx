@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { BusinessProvider } from "./context/BusinessContext";
+import { BusinessDashboardLayout } from "./components/BusinessDashboardLayout";
 import { LayoutShell } from "./components/LayoutShell";
 import Index from "./pages/Index";
 import RealWeddings from "./pages/RealWeddings";
@@ -24,6 +26,7 @@ import { GlobalAIAssistant } from "./components/GlobalAIAssistant";
 import { StyleSwipe } from "./components/StyleSwipe";
 import Planner from "./pages/Planner";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import BusinessOnboarding from "./pages/BusinessOnboarding";
 import { GamificationProvider } from "./context/GamificationContext";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
@@ -39,6 +42,9 @@ import Calendar from "./pages/Calendar";
 import Assets from "./pages/Assets";
 import Clients from "./pages/Clients";
 import BlackBook from "./pages/BlackBook";
+import Finance from "./pages/Finance";
+import Contracts from "./pages/Contracts";
+import CoupleWizard from "./pages/onboarding/CoupleWizard";
 
 
 const queryClient = new QueryClient();
@@ -47,73 +53,115 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <GamificationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <LayoutShell>
-                <Routes>
-                  {/* ... existing routes ... */}
-                  <Route path="/" element={<Index />} />
-                  <Route path="/discover" element={<Discover />} />
-                  <Route path="/weddings" element={<RealWeddings />} />
-                  <Route path="/vendors" element={<VendorsDirectory />} />
-                  <Route path="/venues" element={<VenuesDirectory />} />
-                  <Route path="/vendors/:id" element={<VendorDetail />} />
-                  <Route path="/venues/:id" element={<VenueDetail />} />
-                  <Route path="/tips" element={<PlanningTips />} />
-                  <Route path="/tips/:id" element={<PlanningTipDetail />} />
-                  <Route path="/blog" element={<Blog />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/list-venue" element={<ListVenue />} />
-                  <Route path="/join-vendor" element={<ListBusiness />} />
-                  <Route path="/partner" element={<Partner />} />
-                  <Route path="/style-matcher" element={
-                    <div className="container mx-auto py-20">
-                      <StyleSwipe />
-                    </div>
-                  } />
+        <BusinessProvider>
+          <GamificationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <LayoutShell>
+                  <Routes>
+                    {/* ... existing routes ... */}
+                    <Route path="/" element={<Index />} />
+                    <Route path="/discover" element={<Discover />} />
+                    <Route path="/weddings" element={<RealWeddings />} />
+                    <Route path="/vendors" element={<VendorsDirectory />} />
+                    <Route path="/venues" element={<VenuesDirectory />} />
+                    <Route path="/vendors/:id" element={<VendorDetail />} />
+                    <Route path="/venues/:id" element={<VenueDetail />} />
+                    <Route path="/tips" element={<PlanningTips />} />
+                    <Route path="/tips/:id" element={<PlanningTipDetail />} />
+                    <Route path="/blog" element={<Blog />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/list-venue" element={<ListVenue />} />
+                    <Route path="/join-vendor" element={<ListBusiness />} />
+                    <Route path="/partner" element={<Partner />} />
+                    <Route path="/style-matcher" element={
+                      <div className="container mx-auto py-20">
+                        <StyleSwipe />
+                      </div>
+                    } />
 
-                  {/* PRIVATE ROUTES */}
-                  <Route element={<ProtectedRoute />}>
-                    <Route path="/profile" element={<Profile />} />
-                  </Route>
+                    {/* PRIVATE ROUTES */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/profile" element={<Profile />} />
+                    </Route>
 
-                  {/* COUPLE & ADMIN ROUTES */}
-                  <Route element={<ProtectedRoute allowedRoles={['couple', 'admin']} />}>
-                    <Route path="/budget" element={<Budget />} />
-                    <Route path="/planner" element={<Planner />} />
-                    <Route path="/moodboard" element={<Moodboard />} />
-                    <Route path="/community" element={<Community />} />
-                  </Route>
+                    {/* COUPLE & ADMIN ROUTES */}
+                    <Route element={<ProtectedRoute allowedRoles={['couple', 'admin']} />}>
+                      <Route path="/budget" element={<Budget />} />
+                      <Route path="/planner" element={<Planner />} />
+                      <Route path="/moodboard" element={<Moodboard />} />
+                      <Route path="/community" element={<Community />} />
+                      <Route path="/onboarding/couple" element={
+                        <div className="min-h-screen">
+                          <CoupleWizard />
+                        </div>
+                      } />
+                    </Route>
 
-                  {/* BUSINESS & ADMIN ROUTES */}
-                  <Route element={<ProtectedRoute allowedRoles={['vendor', 'planner', 'venue', 'admin']} />}>
-                    <Route path="/business" element={<BusinessDashboard />} />
-                    <Route path="/leads" element={<Leads />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/assets" element={<Assets />} />
-                  </Route>
+                    {/* BUSINESS & ADMIN ROUTES - Wrapped with BusinessDashboardLayout */}
+                    <Route element={<ProtectedRoute allowedRoles={['vendor', 'planner', 'venue', 'admin']} />}>
+                      <Route path="/business" element={
+                        <BusinessDashboardLayout>
+                          <BusinessDashboard />
+                        </BusinessDashboardLayout>
+                      } />
+                      <Route path="/business/onboarding" element={
+                        <BusinessDashboardLayout>
+                          <BusinessOnboarding />
+                        </BusinessDashboardLayout>
+                      } />
 
-                  {/* PLANNER & ADMIN ROUTES */}
-                  <Route element={<ProtectedRoute allowedRoles={['planner', 'admin']} />}>
-                    <Route path="/clients" element={<Clients />} />
-                    <Route path="/black-book" element={<BlackBook />} />
-                  </Route>
+                      {/* Isolated /pro group for operational workflows */}
+                      <Route path="/pro">
+                        <Route path="leads" element={
+                          <BusinessDashboardLayout>
+                            <Leads />
+                          </BusinessDashboardLayout>
+                        } />
+                        <Route path="calendar" element={
+                          <BusinessDashboardLayout>
+                            <Calendar />
+                          </BusinessDashboardLayout>
+                        } />
+                        <Route path="assets" element={
+                          <BusinessDashboardLayout>
+                            <Assets />
+                          </BusinessDashboardLayout>
+                        } />
+                        <Route path="finance" element={
+                          <BusinessDashboardLayout>
+                            <Finance />
+                          </BusinessDashboardLayout>
+                        } />
+                        <Route path="contracts" element={
+                          <BusinessDashboardLayout>
+                            <Contracts />
+                          </BusinessDashboardLayout>
+                        } />
+                      </Route>
+                    </Route>
 
-                  {/* ADMIN ROUTES */}
-                  <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                  </Route>
+                    {/* PLANNER & ADMIN ROUTES */}
+                    <Route element={<ProtectedRoute allowedRoles={['planner', 'admin']} />}>
+                      <Route path="/clients" element={<Clients />} />
+                      <Route path="/black-book" element={<BlackBook />} />
+                    </Route>
 
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </LayoutShell>
-              <GlobalAIAssistant />
-            </BrowserRouter>
-          </TooltipProvider>
-        </GamificationProvider>
+                    {/* ADMIN ROUTES */}
+                    <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                      <Route path="/admin" element={<AdminDashboard />} />
+                    </Route>
+
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </LayoutShell>
+                <GlobalAIAssistant />
+              </BrowserRouter>
+            </TooltipProvider>
+          </GamificationProvider>
+        </BusinessProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

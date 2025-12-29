@@ -54,12 +54,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const service_fee_pct = asset.min_service_fee_pct !== null ? Number(asset.min_service_fee_pct) : 0.20;
 
         let base_cost = 0;
-        const avg_base = (asset.base_cost_low + asset.base_cost_high) / 2;
+        // Requirement: use average of low and high for estimation
+        const avg_base = Math.round((asset.base_cost_low + asset.base_cost_high) / 2);
 
         if (asset.cost_model === 'per_guest') {
             base_cost = avg_base * guest_count;
         } else if (asset.cost_model === 'per_hour') {
-            // Default to 4 hours for calculation if per_hour, can be refined later
+            // Default to 4 hours for calculation if per_hour
             base_cost = avg_base * 4;
         } else {
             // flat_fee
@@ -87,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .insert({
                     project_id,
                     category: asset.category_tag,
-                    target_budget: 0, // Initial target budget
+                    target_budget: base_cost, // Use base cost as initial target
                     status: 'OPEN'
                 })
                 .select('id')
@@ -105,13 +106,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 source_asset_id: asset_id,
                 calculated_cost_pretax: base_cost,
                 calculated_total_real: total_real,
+                is_selected: false,
                 notes: `Automatically added from swipe. Base: $${(base_cost / 100).toLocaleString()}, Service Fee: ${(service_fee_pct * 100).toFixed(0)}%, Tax: ${(tax_rate * 100).toFixed(1)}%`
             });
 
         if (candidateError) throw candidateError;
 
         // FORMAT RETURN VALUES
-        const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+        const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
         return res.status(200).json({
             status: 'success',

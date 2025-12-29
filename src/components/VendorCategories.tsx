@@ -14,14 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 
 const categories = [
-  { name: "Photographers", icon: Camera, count: "1,200+", color: "bg-blush" },
-  { name: "Florists", icon: Flower2, count: "850+", color: "bg-sage-light" },
+  { name: "Photographers", icon: Camera, count: "1,200+", color: "bg-champagne-light" },
+  { name: "Florists", icon: Flower2, count: "850+", color: "bg-champagne-light" },
   { name: "Musicians & DJs", icon: Music, count: "620+", color: "bg-champagne-light" },
-  { name: "Caterers", icon: UtensilsCrossed, count: "780+", color: "bg-blush" },
-  { name: "Cake Designers", icon: Cake, count: "340+", color: "bg-sage-light" },
+  { name: "Caterers", icon: UtensilsCrossed, count: "780+", color: "bg-champagne-light" },
+  { name: "Cake Designers", icon: Cake, count: "340+", color: "bg-champagne-light" },
   { name: "Planners", icon: Sparkles, count: "950+", color: "bg-champagne-light" },
-  { name: "Hair & Makeup", icon: Users, count: "530+", color: "bg-blush" },
-  { name: "Videographers", icon: Video, count: "420+", color: "bg-sage-light" },
+  { name: "Hair & Makeup", icon: Users, count: "530+", color: "bg-champagne-light" },
+  { name: "Videographers", icon: Video, count: "420+", color: "bg-champagne-light" },
 ];
 
 export const VendorCategories = () => {
@@ -103,7 +103,7 @@ export const VendorCategories = () => {
           className="text-center mt-12"
         >
           <Link to="/vendors">
-            <Button variant="outline" size="lg" className="gap-2">
+            <Button variant="outline" size="lg" className="gap-2 text-rose-600 hover:bg-rose-50">
               Browse All Vendors
               <ArrowRight className="w-4 h-4" />
             </Button>

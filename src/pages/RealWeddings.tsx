@@ -126,7 +126,7 @@ const RealWeddings = () => {
               <Button
                 variant={showFilters ? "secondary" : "outline"}
                 onClick={() => setShowFilters(!showFilters)}
-                className="gap-2 shrink-0"
+                className="gap-2 shrink-0 text-rose-600 hover:bg-rose-50"
               >
                 <Filter className="w-4 h-4" />
                 Filters
@@ -137,7 +137,7 @@ const RealWeddings = () => {
                 <select
                   value={selectedStyle}
                   onChange={(e) => setSelectedStyle(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   {styles.map((style) => (
                     <option key={style} value={style}>{style}</option>
@@ -147,7 +147,7 @@ const RealWeddings = () => {
                 <select
                   value={selectedSeason}
                   onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   {seasons.map((season) => (
                     <option key={season} value={season}>{season}</option>
@@ -157,7 +157,7 @@ const RealWeddings = () => {
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   {locationsList.map((loc) => (
                     <option key={loc} value={loc}>{loc}</option>

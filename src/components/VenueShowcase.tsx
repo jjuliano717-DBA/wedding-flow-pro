@@ -61,7 +61,7 @@ export const VenueShowcase = () => {
             Featured Venues
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            From elegant ballrooms to romantic gardens, discover the perfect 
+            From elegant ballrooms to romantic gardens, discover the perfect
             backdrop for your celebration.
           </p>
         </motion.div>
@@ -118,7 +118,7 @@ export const VenueShowcase = () => {
                   <h3 className="font-serif text-xl text-foreground font-medium mb-2 group-hover:text-primary transition-colors">
                     {venue.name}
                   </h3>
-                  
+
                   <p className="flex items-center gap-1.5 text-muted-foreground text-sm mb-4">
                     <MapPin className="w-4 h-4" />
                     {venue.location}
@@ -132,7 +132,7 @@ export const VenueShowcase = () => {
                         ({venue.reviews} reviews)
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
                       <Users className="w-4 h-4" />
                       {venue.capacity}
@@ -153,7 +153,7 @@ export const VenueShowcase = () => {
           className="text-center mt-12"
         >
           <Link to="/venues">
-            <Button variant="outline" size="lg" className="gap-2">
+            <Button variant="outline" size="lg" className="gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700">
               Explore All Venues
               <ArrowRight className="w-4 h-4" />
             </Button>

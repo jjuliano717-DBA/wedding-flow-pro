@@ -61,7 +61,7 @@ export const FeaturedWeddings = () => {
             Featured Weddings
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Discover the talented professionals behind these stunning celebrations 
+            Discover the talented professionals behind these stunning celebrations
             and get inspired for your own special day.
           </p>
         </motion.div>
@@ -99,10 +99,10 @@ export const FeaturedWeddings = () => {
                   alt={`${wedding.couple}'s wedding`}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                
+
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
-                
+
                 {/* Like Button */}
                 <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center hover:bg-card transition-colors">
                   <Heart className="w-5 h-5 text-rose-gold" />
@@ -116,14 +116,14 @@ export const FeaturedWeddings = () => {
                   <h3 className="font-serif text-xl text-primary-foreground font-medium mb-1">
                     {wedding.couple}
                   </h3>
-                  <p className="flex items-center gap-1.5 text-primary-foreground/70 text-sm">
+                  <p className="flex items-center gap-1.5 text-primary-foreground text-sm">
                     <MapPin className="w-3.5 h-3.5" />
                     {wedding.location}
                   </p>
-                  
+
                   {/* Vendors Preview */}
                   <div className="mt-3 pt-3 border-t border-primary-foreground/20">
-                    <p className="text-primary-foreground/60 text-xs">
+                    <p className="text-primary-foreground text-xs">
                       Featuring: {wedding.vendors[0]}
                     </p>
                   </div>
@@ -142,7 +142,7 @@ export const FeaturedWeddings = () => {
           className="text-center mt-12"
         >
           <Link to="/weddings">
-            <Button variant="outline" size="lg" className="gap-2">
+            <Button variant="outline" size="lg" className="gap-2 text-rose-600 hover:bg-rose-50">
               View All Real Weddings
               <ArrowRight className="w-4 h-4" />
             </Button>

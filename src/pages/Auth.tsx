@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Heart } from "lucide-react";
@@ -24,17 +24,34 @@ const signInSchema = z.object({
 
 // Sign Up Schema
 const signUpSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
+  role: z.enum(["couple", "vendor", "planner", "venue"], {
+    required_error: "Please select a role",
+  }),
+  fullName: z.string().optional(),
+  businessName: z.string().optional(),
+  coupleNames: z.string().optional(),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
   location: z.string().optional(),
-  role: z.enum(["couple", "vendor", "planner", "venue"], {
-    required_error: "Please select a role",
-  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine((data) => {
+  // Couples need fullName
+  if (data.role === "couple" && !data.fullName) {
+    return false;
+  }
+  // Businesses need BOTH fullName (contact) and businessName
+  if (["vendor", "venue", "planner"].includes(data.role)) {
+    if (!data.fullName || !data.businessName) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "This field is required based on your role",
+  path: ["fullName", "businessName"],
 });
 
 const Auth = () => {
@@ -58,12 +75,14 @@ const Auth = () => {
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
+      role: "couple",
       fullName: "",
+      businessName: "",
+      coupleNames: "",
       email: "",
       password: "",
       confirmPassword: "",
       location: "",
-      role: "couple",
     },
   });
 
@@ -84,20 +103,29 @@ const Auth = () => {
       // For now, let's redirect to planner default, or logic based on email is removed.
       // Fetch user role for redirection
       const { data: authData } = await supabase.auth.getUser();
+      console.log('Auth data:', authData);
+
       if (authData?.user) {
-        const { data: profile } = await supabase
-          .from('users')
+        const { data: profile, error } = await supabase
+          .from('profiles')
           .select('role')
           .eq('id', authData.user.id)
           .single();
 
+        console.log('Profile data:', profile);
+        console.log('Profile error:', error);
+
         const role = profile?.role || 'couple';
+        console.log('Determined role:', role);
 
         if (role === 'admin') {
+          console.log('Redirecting to /admin');
           navigate("/admin");
         } else if (role === 'vendor' || role === 'planner' || role === 'venue') {
+          console.log('Redirecting to /business');
           navigate("/business");
         } else {
+          console.log('Redirecting to /planner');
           navigate("/planner");
         }
       }
@@ -113,6 +141,8 @@ const Auth = () => {
     try {
       await signUp({
         fullName: values.fullName,
+        businessName: values.businessName,
+        coupleNames: values.coupleNames,
         email: values.email,
         password: values.password,
         location: values.location,
@@ -202,7 +232,7 @@ const Auth = () => {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full bg-rose-gold hover:bg-rose-gold/90 text-white" disabled={isLoading}>
+                  <Button type="submit" className="w-full bg-rose-gold hover:bg-rose-gold/90 text-[#64748b]" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
@@ -220,19 +250,122 @@ const Auth = () => {
             <CardContent>
               <Form {...signUpForm}>
                 <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
+                  {/* Role Selector - MOVED TO TOP */}
                   <FormField
                     control={signUpForm.control}
-                    name="fullName"
+                    name="role"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name <span className="text-red-500">*</span></FormLabel>
+                      <FormItem className="space-y-3">
+                        <FormLabel>I am a... <span className="text-red-500">*</span></FormLabel>
                         <FormControl>
-                          <Input placeholder="Jessica Smith" {...field} />
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="grid grid-cols-2 gap-2"
+                          >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="couple" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Couple
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="vendor" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Vendor
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="planner" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Planner
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="venue" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Venue
+                              </FormLabel>
+                            </FormItem>
+                          </RadioGroup>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Conditional Name Fields */}
+                  {signUpForm.watch('role') === 'couple' ? (
+                    <>
+                      <FormField
+                        control={signUpForm.control}
+                        name="fullName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input placeholder="Jessica Smith" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={signUpForm.control}
+                        name="coupleNames"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Couple Names (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Jessica & Michael" {...field} />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Both partners' names (e.g., "Jessica & Michael")
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <FormField
+                        control={signUpForm.control}
+                        name="fullName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name (Contact Name) <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input placeholder="John Smith" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={signUpForm.control}
+                        name="businessName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Name <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your Business Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+
                   <FormField
                     control={signUpForm.control}
                     name="email"
@@ -282,56 +415,6 @@ const Auth = () => {
                         <FormLabel>Location (City, State)</FormLabel>
                         <FormControl>
                           <Input placeholder="New York, NY" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signUpForm.control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>I am a...</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-2 gap-2"
-                          >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="couple" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Couple
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="vendor" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Vendor
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="planner" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Planner
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="venue" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Venue
-                              </FormLabel>
-                            </FormItem>
-                          </RadioGroup>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

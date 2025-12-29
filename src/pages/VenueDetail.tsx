@@ -52,11 +52,48 @@ const VenueDetail = () => {
         const fetchVenue = async () => {
             if (!id) return;
             try {
-                const { data, error } = await supabase
+                // First try to fetch by ID (for real database records)
+                let { data, error } = await supabase
                     .from('vendors')
                     .select('*')
                     .eq('id', id)
+                    .eq('category', 'venue')
                     .single();
+
+                // If not found and ID looks like mock data (starts with 'v'), try to find by name from mock data
+                if (error && id.startsWith('v')) {
+                    // Mock venue names mapping
+                    const mockVenueNames: Record<string, string> = {
+                        'v1': 'Vineyard Vista',
+                        'v2': 'The Crystal Palace',
+                        'v3': 'The Florida Aquarium',
+                        'v4': 'Hotel Haya',
+                        'v5': 'Rialto Theatre',
+                        'v6': 'Oxford Exchange',
+                        'v7': 'Armature Works',
+                        'v8': 'The Orlo House & Ballroom',
+                        'v9': 'Le Méridien Tampa, The Courthouse',
+                        'v10': 'Tampa Museum of Art',
+                        'v11': 'Yacht StarShip Cruises & Events',
+                        'v12': 'Tampa Garden Club',
+                        'v13': 'Flora Groves Farm'
+                    };
+
+                    const venueName = mockVenueNames[id];
+                    if (venueName) {
+                        const nameResult = await supabase
+                            .from('vendors')
+                            .select('*')
+                            .eq('category', 'venue')
+                            .ilike('name', venueName)
+                            .single();
+
+                        if (!nameResult.error) {
+                            data = nameResult.data;
+                            error = null;
+                        }
+                    }
+                }
 
                 if (error) throw error;
                 setVenue(data);
@@ -86,15 +123,35 @@ const VenueDetail = () => {
         );
     }
 
-    // Fallbacks
-    // Fallbacks
-    const images = venue.image_url ? [venue.image_url] : ["https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200"];
-    const amenities = venue.amenities || ["Parking", "Restrooms", "Wheelchair Access", "WiFi", "Event Cleanup"];
-    const faqs = venue.faqs || [
-        { question: "What is included in the rental fee?", answer: "Tables, chairs, and basic linens are typically included." },
-        { question: "Is there a preferred vendor list?", answer: "Yes, we work with a curated list of top-tier professionals." },
-        { question: "Can we bring our own alcohol?", answer: "Alcohol policies vary by package. Please inquire for details." }
-    ];
+    // Build images array from venue data
+    const buildImagesArray = () => {
+        const imagesList = [];
+
+        // Add main image first
+        if (venue.image_url) {
+            imagesList.push(venue.image_url);
+        }
+
+        // Add all portfolio images
+        if (venue.images && Array.isArray(venue.images)) {
+            imagesList.push(...venue.images);
+        }
+
+        // Fallback to placeholder if no images
+        return imagesList.length > 0 ? imagesList : ["https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200"];
+    };
+
+    const images = buildImagesArray();
+    const amenities = venue.amenities && venue.amenities.length > 0
+        ? venue.amenities
+        : ["Parking", "Restrooms", "Wheelchair Access", "WiFi", "Event Cleanup"];
+    const faqs = venue.faqs && venue.faqs.length > 0
+        ? venue.faqs
+        : [
+            { question: "What is included in the rental fee?", answer: "Tables, chairs, and basic linens are typically included." },
+            { question: "Is there a preferred vendor list?", answer: "Yes, we work with a curated list of top-tier professionals." },
+            { question: "Can we bring our own alcohol?", answer: "Alcohol policies vary by package. Please inquire for details." }
+        ];
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -110,21 +167,49 @@ const VenueDetail = () => {
                     </div>
                 </div>
 
-                {/* Hero Gallery */}
+                {/* Hero Gallery - Full Width Slider */}
                 <div className="container mx-auto px-4 mb-12">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 h-[50vh] min-h-[300px] max-h-[500px] w-full rounded-2xl overflow-hidden relative">
-                        {/* Main Large Image */}
-                        <div className={`${images.length < 3 ? 'md:col-span-3' : 'md:col-span-2'} relative h-full cursor-pointer group`}>
-                            <img src={images[activeImage]} alt={venue.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                            <div className="absolute top-4 right-4 flex gap-2">
+                    <div className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] rounded-2xl overflow-hidden bg-slate-100">
+                        {/* Main Image */}
+                        <div className="relative w-full h-full bg-slate-900">
+                            <img
+                                src={images[activeImage]}
+                                alt={`${venue.name} - Image ${activeImage + 1}`}
+                                className="w-full h-full object-contain"
+                            />
+
+                            {/* Navigation Arrows */}
+                            {images.length > 1 && (
+                                <>
+                                    <button
+                                        onClick={prevImage}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 hover:bg-white shadow-lg flex items-center justify-center transition-all z-10"
+                                        aria-label="Previous image"
+                                    >
+                                        <ChevronLeft className="w-8 h-8 text-slate-700" />
+                                    </button>
+                                    <button
+                                        onClick={nextImage}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 hover:bg-white shadow-lg flex items-center justify-center transition-all z-10"
+                                        aria-label="Next image"
+                                    >
+                                        <ChevronRight className="w-8 h-8 text-slate-700" />
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Image Counter */}
+                            <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-black/70 text-white text-sm font-medium z-10">
+                                {activeImage + 1} / {images.length}
+                            </div>
+
+                            {/* Heart & Share Buttons */}
+                            <div className="absolute top-4 right-4 flex gap-2 z-10">
                                 <Button
                                     size="icon"
                                     variant="secondary"
                                     className={`rounded-full bg-white/90 hover:bg-white transition-colors ${isLiked ? 'text-rose-500' : 'text-gray-400'}`}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsLiked(!isLiked);
-                                    }}
+                                    onClick={() => setIsLiked(!isLiked)}
                                 >
                                     <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                                 </Button>
@@ -132,31 +217,33 @@ const VenueDetail = () => {
                                     size="icon"
                                     variant="secondary"
                                     className="rounded-full bg-white/90 hover:bg-white text-gray-700"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleShare();
-                                    }}
+                                    onClick={handleShare}
                                 >
                                     <Share2 className="w-5 h-5" />
                                 </Button>
                             </div>
                         </div>
-                        {/* Side Images - Only show if we have enough images */}
-                        {images.length >= 3 && (
-                            <div className="hidden md:flex flex-col gap-2 h-full">
-                                <div className="flex-1 relative cursor-pointer overflow-hidden" onClick={() => setActiveImage(1)}>
-                                    <img src={images[1]} alt="Venue detail" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
-                                </div>
-                                <div className="flex-1 relative cursor-pointer overflow-hidden" onClick={() => setActiveImage(2)}>
-                                    <img src={images[2]} alt="Venue detail" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
-                                    {images.length > 3 && (
-                                        <div
-                                            className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer hover:bg-black/40 transition-colors"
-                                            onClick={() => setIsGalleryOpen(true)}
+
+                        {/* Thumbnail Strip - Only show if multiple images */}
+                        {images.length > 1 && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-4 z-10">
+                                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                                    {images.map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setActiveImage(idx)}
+                                            className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all ${idx === activeImage
+                                                ? 'border-white scale-105'
+                                                : 'border-transparent opacity-60 hover:opacity-100'
+                                                }`}
                                         >
-                                            <span className="text-white font-medium text-lg">See All Photos</span>
-                                        </div>
-                                    )}
+                                            <img
+                                                src={img}
+                                                alt={`Thumbnail ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -180,7 +267,7 @@ const VenueDetail = () => {
                                 <span className="text-muted-foreground text-sm font-normal">({venue.google_reviews || 0} reviews)</span>
                             </div>
                             <span className="text-sm text-muted-foreground">
-                                {venue.category ? (venue.category.includes('Venue') ? venue.category : `${venue.category} Venue`) : (venue.type?.includes('Venue') ? venue.type : `${venue.type} Venue`)}
+                                {venue.venue_type || venue.category || 'Venue'}
                             </span>
                         </div>
                     </div>
@@ -195,10 +282,14 @@ const VenueDetail = () => {
                             <DollarSign className="w-5 h-5 text-primary" />
                             <span className="font-medium">{venue.price_range || "$$"} Price Range</span>
                         </div>
-                        <div className="w-px h-6 bg-border/50"></div>
-                        <div className="flex items-center gap-2">
-                            {venue.indoor && venue.outdoor ? <span>Indoor & Outdoor</span> : venue.indoor ? "Indoor" : "Outdoor"}
-                        </div>
+                        {venue.venue_type && (
+                            <>
+                                <div className="w-px h-6 bg-border/50"></div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium">{venue.venue_type}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <section>
@@ -245,18 +336,14 @@ const VenueDetail = () => {
                                 </Accordion>
                             </section>
 
-                            {/* Map (Placeholder) */}
-                            <section className="rounded-2xl overflow-hidden h-[300px] bg-muted relative flex items-center justify-center border border-border">
-                                <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=1600" alt="Map View" className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale" />
-                                <div className="relative bg-background/90 p-6 rounded-xl shadow-lg text-center max-w-sm">
-                                    <MapPin className="w-8 h-8 text-primary mx-auto mb-3" />
-                                    <h3 className="font-medium text-lg mb-1">{venue.address || venue.location}</h3>
-                                    <Button variant="link" asChild className="text-primary mt-2">
-                                        <a href={`https://maps.google.com/?q=${encodeURIComponent(venue.address || venue.location)}`} target="_blank" rel="noopener noreferrer">
-                                            Get Directions <ExternalLink className="w-3 h-3 ml-1" />
-                                        </a>
-                                    </Button>
-                                </div>
+                            {/* Embedded Google Maps */}
+                            <section className="rounded-2xl overflow-hidden h-[300px] relative">
+                                <iframe
+                                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(venue.street_address || venue.location)}`}
+                                    className="w-full h-full border-0"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                />
                             </section>
 
                         </div>
@@ -320,7 +407,7 @@ const VenueDetail = () => {
                                         )}
                                         <div className="flex items-center gap-3 text-sm text-foreground p-2">
                                             <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-primary"><Phone className="w-4 h-4" /></div>
-                                            <span className="font-medium">{venue.phone || "(555) 123-4567"}</span>
+                                            <span className="font-medium">{venue.contact_phone || "(555) 123-4567"}</span>
                                         </div>
                                     </div>
                                 </div>

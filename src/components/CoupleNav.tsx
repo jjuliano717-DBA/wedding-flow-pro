@@ -7,7 +7,7 @@ export const CoupleNav = () => {
 
     const navItems = [
         { icon: Home, label: "Home", href: "/planner" },
-        { icon: Search, label: "Discover", href: "/discover" },
+        { icon: Search, label: "Search", href: "/discover" },
         { icon: Wallet, label: "Budget", href: "/budget" },
         { icon: MessageSquare, label: "Chat", href: "/community" },
         { icon: User, label: "Profile", href: "/profile" },

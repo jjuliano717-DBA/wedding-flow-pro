@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const fetchUserProfile = async (session: Session) => {
         try {
             const { data, error } = await supabase
-                .from('users')
+                .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
@@ -100,13 +100,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     fullName: session.user.user_metadata.full_name || "User",
                     role: session.user.user_metadata.role || "couple",
                 });
-            } else {
-                // Map DB snake_case to CamelCase if needed, but our helper mapped it one-to-one mostly
-                // Depending on SQL definition, columns are snake_case.
-                // We defined SQL as: full_name, role, etc.
+                return;
+            }
+
+            if (data) {
                 setUser({
-                    ...data,
-                    fullName: data.full_name, // Map SQL field to Typescript
+                    id: data.id,
+                    email: session.user.email || "",
+                    fullName: data.full_name || session.user.user_metadata.full_name || "User",
+                    role: data.role,
                     avatarUrl: data.avatar_url,
                     budgetTier: data.budget_tier,
                     stressLevel: data.stress_level,
@@ -151,6 +153,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 options: {
                     data: {
                         full_name: userData.fullName,
+                        business_name: userData.businessName,
+                        couple_names: userData.coupleNames,
                         role: userData.role,
                         location: userData.location
                     }

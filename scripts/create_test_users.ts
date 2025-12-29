@@ -1,37 +1,41 @@
 // scripts/create_test_users.ts
-import { supabase } from "../src/lib/supabase";
+import { createClient } from '@supabase/supabase-js';
 
+// Load Supabase credentials from environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('Supabase URL or Service Role Key not set.');
+    process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Define the test users we want to create
 const testUsers = [
-    { email: "vendor@demo.com", role: "vendor" },
-    { email: "admin@test.com", role: "admin" },
-    { email: "venue@demo.com", role: "venue" },
+    { email: 'vendor_user@example.com', role: 'vendor', fullName: 'Vendor User' },
+    { email: 'venue_user@example.com', role: 'venue', fullName: 'Venue User' },
 ];
 
 async function createTestUsers() {
-    for (const { email, role } of testUsers) {
-        const { data, error } = await supabase.auth.signUp({
+    for (const { email, role, fullName } of testUsers) {
+        const { data, error } = await supabase.auth.admin.createUser({
             email,
-            password: "pasword1",
+            password: 'password1',
+            email_confirm: true,
+            user_metadata: { role, full_name: fullName },
         });
+
         if (error) {
-            console.error(`Failed to sign up ${email}:`, error.message);
-            continue;
-        }
-        const userId = data.user?.id;
-        if (userId) {
-            const { error: upsertError } = await supabase
-                .from("users")
-                .upsert({ id: userId, role });
-            if (upsertError) {
-                console.error(`Failed to set role for ${email}:`, upsertError.message);
-            } else {
-                console.log(`Created ${email} with role ${role}`);
-            }
+            console.error(`❌ Failed to create ${role} user (${email}):`, error.message);
+        } else {
+            console.log(`✅ Created ${role} user (${email}) – ID: ${data?.user?.id}`);
         }
     }
 }
 
 createTestUsers()
-    .then(() => console.log("All test users processed"))
-    .catch((e) => console.error("Unexpected error", e))
+    .then(() => console.log('🚀 All test users processed'))
+    .catch((e) => console.error('⚠️ Unexpected error', e))
     .finally(() => process.exit());

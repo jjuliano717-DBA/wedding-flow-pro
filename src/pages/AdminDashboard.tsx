@@ -100,7 +100,9 @@ interface Vendor {
     id: string;
     name: string;
     description: string;
+    category: string; // 'vendor', 'venue', or 'planner'
     type: string;
+    venue_type?: string; // Specific venue type for venues
     location: string;
     website: string;
     google_business_url: string;
@@ -158,6 +160,9 @@ const AdminDashboard = () => {
 
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Sorting State
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
     useEffect(() => {
         fetchAllData();
     }, []);
@@ -165,17 +170,27 @@ const AdminDashboard = () => {
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            const [usersRes, venuesRes, vendorsRes, weddingsRes, tipsRes] = await Promise.all([
-                supabase.from('users').select('*'),
-                supabase.from('venues').select('*'),
+            const [usersRes, vendorsRes, weddingsRes, tipsRes] = await Promise.all([
+                supabase.from('profiles').select('*'),
                 supabase.from('vendors').select('*'),
                 supabase.from('real_weddings').select('*'),
                 supabase.from('planning_tips').select('*')
             ]);
 
             if (usersRes.data) setUsers(usersRes.data);
-            if (venuesRes.data) setVenues(venuesRes.data);
-            if (vendorsRes.data) setVendors(vendorsRes.data);
+            if (vendorsRes.data) {
+                // Create a map of owner_id to full_name for quick lookup
+                const profileMap = new Map(usersRes.data?.map(u => [u.id, u.full_name]) || []);
+
+                // Map vendors to include contact_name from profiles
+                const vendorsWithContactName = vendorsRes.data.map((v: any) => ({
+                    ...v,
+                    contact_name: v.owner_id ? (profileMap.get(v.owner_id) || v.contact_name || '') : (v.contact_name || '')
+                }));
+                setVendors(vendorsWithContactName);
+                // Set venues from vendors where category='venue'
+                setVenues(vendorsWithContactName.filter((v: any) => v.category === 'venue'));
+            }
             if (weddingsRes.data) setWeddings(weddingsRes.data);
             if (tipsRes.data) setTips(tipsRes.data);
 
@@ -187,6 +202,39 @@ const AdminDashboard = () => {
         }
     };
 
+    // Get type options based on category
+    const getTypeOptions = (category: string) => {
+        if (category === 'venue') {
+            return ['All-Inclusive Venues', 'Banquet Halls', 'Conference Centers', 'Country Clubs', 'Hotels', 'House of Worship', 'Universities and Colleges', 'Barns', 'Cabins and Cottages', 'Campgrounds', 'Farms', 'Ranches', 'Tree Houses', 'Wineries and Vineyards', 'Breweries and Distilleries', 'City Halls', 'Lofts and Rooftops', 'Nightclubs', 'Restaurants', 'Bed and Breakfasts', 'Castles', 'Greenhouses', 'Historic Places', 'Lake Houses', 'Private Gardens', 'Aquariums and Zoos', 'Beaches', 'Boats and Yachts', 'Resorts', 'Amusement Parks', 'Food Truck Park', 'Libraries', 'Museums and Galleries', 'Sports Stadiums', 'Theaters', 'Private Homes', 'Public Spaces and Parks'];
+        } else if (category === 'planner') {
+            return ['Wedding Planner', 'Event Coordinator', 'Day-of Coordinator'];
+        } else {
+            return ['Photographer', 'Videographer', 'Florist', 'Caterer', 'Cake Designer', 'DJ/Band', 'Live Band', 'Hair & Makeup', 'Officiant', 'Transportation', 'Rentals', 'Lighting & Sound', 'Photo Booth', 'Invitations & Stationery', 'Jewelry', 'Bridal Shop', 'Tuxedo Rental', 'Pest Control', 'Landscaper', 'Tents', 'Other'];
+        }
+    };
+
+    // Sort vendors
+    const sortVendors = (vendorsToSort: Vendor[]) => {
+        return [...vendorsToSort].sort((a, b) => {
+            const aValue = a[sortConfig.key as keyof Vendor];
+            const bValue = b[sortConfig.key as keyof Vendor];
+            if (aValue === null || aValue === undefined) return 1;
+            if (bValue === null || bValue === undefined) return -1;
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            }
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+            }
+            return 0;
+        });
+    };
+
+    const handleSort = (key: string) => {
+        setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
+    };
+
+    const displayVendors = sortVendors(vendors);
     // --- Actions ---
 
     const handleDelete = async (id: string, type: EditorType) => {
@@ -197,7 +245,7 @@ const AdminDashboard = () => {
             'venue': 'venues',
             'wedding': 'real_weddings',
             'tip': 'planning_tips',
-            'user': 'users'
+            'user': 'profiles'
         };
 
         try {
@@ -272,7 +320,7 @@ const AdminDashboard = () => {
             'venue': 'venues',
             'wedding': 'real_weddings',
             'tip': 'planning_tips',
-            'user': 'users'
+            'user': 'profiles'
         };
 
         const table = tableMap[editorType];
@@ -281,6 +329,20 @@ const AdminDashboard = () => {
             let res;
             // Clean up formData to remove immutable fields or extra properties
             const { id, created_at, ...rawCleanData } = formData;
+
+
+            // Validate vendor category and type
+            if (editorType === 'vendor') {
+                if (!['vendor', 'venue', 'planner'].includes(formData.category)) {
+                    toast.error('Invalid category. Must be vendor, venue, or planner.');
+                    return;
+                }
+                const validTypes = getTypeOptions(formData.category);
+                if (!validTypes.includes(formData.type)) {
+                    toast.error(`Invalid type "${formData.type}" for category "${formData.category}"`);
+                    return;
+                }
+            }
 
             let cleanData = rawCleanData;
 
@@ -346,41 +408,93 @@ const AdminDashboard = () => {
     const renderEditorContent = () => {
         if (editorType === 'vendor') {
             return (
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Name</Label><Input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
-                        <div className="space-y-2"><Label>Type</Label>
-                            <Select value={formData.type || 'Photographer'} onValueChange={v => setFormData({ ...formData, type: v })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {['Photographer', 'Florist', 'DJ/Band', 'Caterer', 'Cake Designer', 'Planner', 'Hair & Makeup', 'Videographer', 'Pest Control'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                    {/* Basic Information */}
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-sm text-slate-700 border-b pb-2">Basic Information</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2"><Label>Business Name</Label><Input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+                            <div className="space-y-2"><Label>Category</Label>
+                                <Select value={formData.category || 'vendor'} onValueChange={v => setFormData({ ...formData, category: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="vendor">Vendor</SelectItem>
+                                        <SelectItem value="venue">Venue</SelectItem>
+                                        <SelectItem value="planner">Planner</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2"><Label>Type</Label>
+                                <Select value={formData.type || 'Photographer'} onValueChange={v => setFormData({ ...formData, type: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {getTypeOptions(formData.category || 'vendor').map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Image URL (Photo)</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://example.com/photo.jpg" /></div>
-                        <div className="space-y-2"><Label>Website</Label><Input value={formData.website || ''} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://example.com" /></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} /></div>
-                        <div className="space-y-2"><Label>Service Zipcodes (comma separated)</Label><Input value={Array.isArray(formData.service_zipcodes) ? formData.service_zipcodes.join(', ') : (formData.service_zipcodes || '')} onChange={e => setFormData({ ...formData, service_zipcodes: e.target.value.split(',').map((t: string) => t.trim()) })} placeholder="33602, 33603" /></div>
-                    </div>
-                    <div className="space-y-2"><Label>Google Business URL</Label><Input value={formData.google_business_url || ''} onChange={e => setFormData({ ...formData, google_business_url: e.target.value })} placeholder="https://g.page/..." /></div>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-2"><Label>Google Rating</Label><Input type="number" step="0.1" value={formData.google_rating || 0} onChange={e => setFormData({ ...formData, google_rating: parseFloat(e.target.value) })} /></div>
-                        <div className="space-y-2"><Label>Reviews</Label><Input type="number" value={formData.google_reviews || 0} onChange={e => setFormData({ ...formData, google_reviews: parseInt(e.target.value) })} /></div>
-                        <div className="space-y-2"><Label>Heart Rating</Label><Input type="number" step="0.1" value={formData.heart_rating || 0} onChange={e => setFormData({ ...formData, heart_rating: parseFloat(e.target.value) })} /></div>
-                    </div>
-                    <div className="flex items-center gap-6 pt-2">
-                        <div className="flex items-center space-x-2">
-                            <Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} />
-                            <Label htmlFor="exclusive">Exclusive Vendor?</Label>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="min-h-[80px]" /></div>
+
+                    {/* Contact Information */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm text-slate-700">Contact Information</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label>Contact Name</Label><Input value={formData.contact_name || ''} onChange={e => setFormData({ ...formData, contact_name: e.target.value })} placeholder="John Smith" /></div>
+                            <div className="space-y-2"><Label>Contact Email</Label><Input value={formData.contact_email || ''} onChange={e => setFormData({ ...formData, contact_email: e.target.value })} placeholder="contact@business.com" /></div>
+                            <div className="space-y-2"><Label>Contact Phone</Label><Input value={formData.contact_phone || ''} onChange={e => setFormData({ ...formData, contact_phone: e.target.value })} placeholder="(555) 123-4567" /></div>
+                            <div className="space-y-2"><Label>Phone</Label><Input value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(555) 123-4567" /></div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Switch id="featured" checked={formData.featured || false} onCheckedChange={c => setFormData({ ...formData, featured: c })} />
-                            <Label htmlFor="featured">Featured?</Label>
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm text-slate-700">Location</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label>Street Address</Label><Input value={formData.street_address || ''} onChange={e => setFormData({ ...formData, street_address: e.target.value })} placeholder="123 Main St" /></div>
+                            <div className="space-y-2"><Label>Location (City, State)</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="Tampa, FL" /></div>
+                        </div>
+                        <div className="space-y-2"><Label>Service Zipcodes (comma-separated)</Label><Input value={Array.isArray(formData.service_zipcodes) ? formData.service_zipcodes.join(', ') : (formData.service_zipcodes || '')} onChange={e => setFormData({ ...formData, service_zipcodes: e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean) })} placeholder="33602, 33603" /></div>
+                    </div>
+
+                    {/* Online Presence */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm text-slate-700">Online Presence</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label>Website</Label><Input value={formData.website || ''} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://business.com" /></div>
+                            <div className="space-y-2"><Label>Google Business URL</Label><Input value={formData.google_business_url || ''} onChange={e => setFormData({ ...formData, google_business_url: e.target.value })} placeholder="https://g.page/..." /></div>
+                        </div>
+                        <div className="space-y-2"><Label>Main Image URL</Label><Input value={formData.image_url || ''} onChange={e => setFormData({ ...formData, image_url: e.target.value })} placeholder="https://example.com/photo.jpg" /></div>
+                        <div className="space-y-2"><Label>Portfolio Images (comma-separated URLs)</Label><Textarea value={Array.isArray(formData.images) ? formData.images.join(', ') : (formData.images || '')} onChange={e => setFormData({ ...formData, images: e.target.value.split(',').map((url: string) => url.trim()).filter(Boolean) })} placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg" className="min-h-[80px]" /></div>
+                        <div className="space-y-2"><Label>Gallery Images (comma-separated URLs)</Label><Textarea value={Array.isArray(formData.gallery_images) ? formData.gallery_images.join(', ') : (formData.gallery_images || '')} onChange={e => setFormData({ ...formData, gallery_images: e.target.value.split(',').map((url: string) => url.trim()).filter(Boolean) })} placeholder="https://example.com/gallery1.jpg, https://example.com/gallery2.jpg" className="min-h-[80px]" /></div>
+                    </div>
+                    {/* Ratings & Reviews */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm text-slate-700">Ratings & Reviews</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2"><Label>Google Rating</Label><Input type="number" step="0.1" value={formData.google_rating || 0} onChange={e => setFormData({ ...formData, google_rating: parseFloat(e.target.value) })} /></div>
+                            <div className="space-y-2"><Label>Reviews</Label><Input type="number" value={formData.google_reviews || 0} onChange={e => setFormData({ ...formData, google_reviews: parseInt(e.target.value) })} /></div>
+                            <div className="space-y-2"><Label>Heart Rating</Label><Input type="number" step="0.1" value={formData.heart_rating || 0} onChange={e => setFormData({ ...formData, heart_rating: parseFloat(e.target.value) })} /></div>
+                        </div>
+                    </div>
+
+                    {/* Status & Flags */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm text-slate-700">Status & Flags</h3>
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center space-x-2"><Switch id="active" checked={formData.active || false} onCheckedChange={c => setFormData({ ...formData, active: c })} /><Label htmlFor="active">Active</Label></div>
+                            <div className="flex items-center space-x-2"><Switch id="verified" checked={formData.verified || false} onCheckedChange={c => setFormData({ ...formData, verified: c })} /><Label htmlFor="verified">Verified</Label></div>
+                            <div className="flex items-center space-x-2"><Switch id="exclusive" checked={formData.exclusive || false} onCheckedChange={c => setFormData({ ...formData, exclusive: c })} /><Label htmlFor="exclusive">Exclusive</Label></div>
+                            <div className="flex items-center space-x-2"><Switch id="featured" checked={formData.featured || false} onCheckedChange={c => setFormData({ ...formData, featured: c })} /><Label htmlFor="featured">Featured</Label></div>
+                        </div>
+                    </div>
+
+                    {/* FAQs */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-semibold text-sm text-slate-700">FAQs</h3>
+                        <div className="space-y-2">
+                            <Label>FAQs (JSON format)</Label>
+                            <Textarea value={typeof formData.faqs === 'string' ? formData.faqs : JSON.stringify(formData.faqs || [], null, 2)} onChange={e => { try { const parsed = JSON.parse(e.target.value); setFormData({ ...formData, faqs: parsed }); } catch { setFormData({ ...formData, faqs: e.target.value }); } }} placeholder='[{"question": "Do you travel?", "answer": "Yes, within 100 miles."}]' className="min-h-[120px] font-mono text-sm" />
                         </div>
                     </div>
                 </div>
@@ -533,30 +647,72 @@ const AdminDashboard = () => {
         }
         if (editorType === 'user') {
             return (
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2"><Label>Full Name</Label><Input value={formData.full_name || ''} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
-                    <div className="space-y-2"><Label>Email</Label><Input value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} disabled={!!editingId} /></div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Role</Label>
-                            <Select value={formData.role || 'couple'} onValueChange={v => setFormData({ ...formData, role: v })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {['couple', 'vendor', 'planner', 'venue', 'admin'].map(r => <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                <div className="grid gap-4 py-4 h-[70vh] overflow-y-auto pr-2">
+                    {/* Basic Information */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-700 border-b pb-2">Basic Information</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label>Full Name</Label><Input value={formData.full_name || ''} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
+                            <div className="space-y-2"><Label>Email</Label><Input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} disabled={!!editingId} /></div>
                         </div>
-                        <div className="space-y-2"><Label>Status</Label>
-                            <Select value={formData.status || 'active'} onValueChange={v => setFormData({ ...formData, status: v })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {['active', 'inactive', 'banned'].map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label>Role</Label>
+                                <Select value={formData.role || 'couple'} onValueChange={v => setFormData({ ...formData, role: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {['couple', 'vendor', 'planner', 'venue', 'admin'].map(r => <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2"><Label>Status</Label>
+                                <Select value={formData.status || 'active'} onValueChange={v => setFormData({ ...formData, status: v })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {['active', 'inactive', 'banned'].map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+                        <div className="space-y-2"><Label>Avatar URL</Label><Input value={formData.avatar_url || ''} onChange={e => setFormData({ ...formData, avatar_url: e.target.value })} placeholder="https://example.com/avatar.jpg" /></div>
+                        <div className="space-y-2"><Label>Phone Number</Label><Input value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(555) 555-5555" /></div>
                     </div>
+
+                    {/* Wedding Details - Only for couples */}
+                    {formData.role === 'couple' && (
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-slate-700 border-b pb-2">Wedding Details</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label>Partner 1 Name</Label><Input value={formData.partner1_name || ''} onChange={e => setFormData({ ...formData, partner1_name: e.target.value })} /></div>
+                                <div className="space-y-2"><Label>Partner 2 Name</Label><Input value={formData.partner2_name || ''} onChange={e => setFormData({ ...formData, partner2_name: e.target.value })} /></div>
+                            </div>
+                            <div className="space-y-2"><Label>Wedding Date</Label><Input type="date" value={formData.wedding_date || ''} onChange={e => setFormData({ ...formData, wedding_date: e.target.value })} /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label>Budget ($)</Label><Input type="number" value={formData.budget || ''} onChange={e => setFormData({ ...formData, budget: e.target.value ? parseFloat(e.target.value) : null })} placeholder="50000" /></div>
+                                <div className="space-y-2"><Label>Guest Count</Label><Input type="number" value={formData.guest_count || ''} onChange={e => setFormData({ ...formData, guest_count: e.target.value ? parseInt(e.target.value) : null })} placeholder="150" /></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Preferences - Only for couples */}
+                    {formData.role === 'couple' && (
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-slate-700 border-b pb-2">Preferences</h3>
+                            <div className="space-y-2"><Label>Venue Preferences</Label><Textarea value={formData.venue_preferences || ''} onChange={e => setFormData({ ...formData, venue_preferences: e.target.value })} placeholder="Outdoor, rustic, capacity 200..." /></div>
+                            <div className="space-y-2"><Label>Style Preferences</Label><Textarea value={formData.style_preferences || ''} onChange={e => setFormData({ ...formData, style_preferences: e.target.value })} placeholder="Bohemian, vintage, garden party..." /></div>
+                        </div>
+                    )}
+
+                    {/* Business Link - Only for vendors/venues/planners */}
+                    {(formData.role === 'vendor' || formData.role === 'venue' || formData.role === 'planner') && (
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-slate-700 border-b pb-2">Business Link</h3>
+                            <div className="space-y-2"><Label>Vendor Profile ID (UUID)</Label><Input value={formData.vendor_profile_id || ''} onChange={e => setFormData({ ...formData, vendor_profile_id: e.target.value })} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></div>
+                        </div>
+                    )}
                 </div>
             )
         }
+
     }
 
     if (loading) {
@@ -569,51 +725,50 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 mt-16 max-w-7xl min-h-[calc(100vh-100px)] flex flex-col animate-fade-in">
+        <div className="container mx-auto px-4 py-8 max-w-7xl min-h-[calc(100vh-100px)] flex flex-col animate-fade-in text-white">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold flex items-center gap-3 font-serif">
-                        <ShieldCheck className="w-8 h-8 text-rose-gold" />
+                        <ShieldCheck className="w-8 h-8 text-rose-400" />
                         Admin Command Center
                     </h1>
-                    <p className="text-muted-foreground mt-1">Manage platform data, users, and exclusives.</p>
+                    <p className="text-slate-400 mt-1">Manage platform data, users, and exclusives.</p>
                 </div>
                 <div className="flex gap-4">
-                    <Button variant="outline" onClick={fetchAllData}>Refresh Data</Button>
+                    <Button variant="outline" onClick={fetchAllData} className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700">Refresh Data</Button>
                 </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="w-full justify-start mb-6 overflow-x-auto bg-slate-100 p-1">
-                    <TabsTrigger value="vendors">Vendors</TabsTrigger>
-                    <TabsTrigger value="venues">Venues</TabsTrigger>
-                    <TabsTrigger value="weddings">Real Weddings</TabsTrigger>
-                    <TabsTrigger value="tips">Planning Tips</TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
-                    <TabsTrigger value="metrics">Platform Metrics</TabsTrigger>
-                    <TabsTrigger value="disputes">Dispute Resolution</TabsTrigger>
+                <TabsList className="w-full justify-start mb-6 overflow-x-auto bg-slate-900 border border-slate-800 p-1 rounded-xl">
+                    <TabsTrigger value="vendors" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Business Directory</TabsTrigger>
+                    <TabsTrigger value="weddings" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Real Weddings</TabsTrigger>
+                    <TabsTrigger value="tips" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Planning Tips</TabsTrigger>
+                    <TabsTrigger value="users" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Users</TabsTrigger>
+                    <TabsTrigger value="metrics" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Platform Metrics</TabsTrigger>
+                    <TabsTrigger value="disputes" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400">Dispute Resolution</TabsTrigger>
                 </TabsList>
 
                 {/* --- METRICS TAB --- */}
                 <TabsContent value="metrics" className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         {[
-                            { label: "Total Revenue", value: "$428.5k", icon: DollarSign, trend: "+12.4%", color: "text-green-600" },
-                            { label: "Monthly Growth", value: "24.8%", icon: TrendingUp, trend: "+2.1%", color: "text-blue-600" },
-                            { label: "Active Subscriptions", value: "1,240", icon: UserCheck, trend: "+85", color: "text-rose-gold" },
-                            { label: "Platform Trust Score", value: "98.2%", icon: ShieldCheck, trend: "+0.2%", color: "text-emerald-600" },
+                            { label: "Total Revenue", value: "$428.5k", icon: DollarSign, trend: "+12.4%", color: "text-green-400" },
+                            { label: "Monthly Growth", value: "24.8%", icon: TrendingUp, trend: "+2.1%", color: "text-blue-400" },
+                            { label: "Active Subscriptions", value: "1,240", icon: UserCheck, trend: "+85", color: "text-rose-400" },
+                            { label: "Platform Trust Score", value: "98.2%", icon: ShieldCheck, trend: "+0.2%", color: "text-emerald-400" },
                         ].map((stat) => (
-                            <Card key={stat.label} className="p-6">
+                            <Card key={stat.label} className="p-6 bg-slate-900/50 border-slate-800 text-white">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className={`p-2 rounded-lg bg-slate-50 ${stat.color}`}>
+                                    <div className={`p-2 rounded-lg bg-slate-800 ${stat.color}`}>
                                         <stat.icon className="w-5 h-5" />
                                     </div>
-                                    <Badge variant="outline" className="text-xs font-bold text-green-600">
+                                    <Badge variant="outline" className="text-xs font-bold text-green-400 border-green-400/20 bg-green-400/5">
                                         {stat.trend}
                                     </Badge>
                                 </div>
                                 <h4 className="text-sm font-medium text-slate-500">{stat.label}</h4>
-                                <p className="text-2xl font-bold text-brand-navy mt-1">{stat.value}</p>
+                                <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
                             </Card>
                         ))}
                     </div>
@@ -685,32 +840,42 @@ const AdminDashboard = () => {
                     </DialogContent>
                 </Dialog>
 
-                {/* --- VENDORS TAB --- */}
+                {/* --- VENDORS TAB (UNIFIED BUSINESS DIRECTORY) --- */}
                 <TabsContent value="vendors">
                     <div className="flex justify-end mb-4">
-                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('vendor')}><Plus className="w-4 h-4" /> Add Vendor</Button>
+                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('vendor')}><Plus className="w-4 h-4" /> Add Business</Button>
                     </div>
                     <Card><div className="rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[100px]">ID</TableHead>
-                                    <TableHead>Vendor Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Google Rating</TableHead>
-                                    <TableHead>Heart Rating</TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort('name')}><div className="flex items-center gap-1">Business Name {sortConfig.key === 'name' && <span className="text-rose-gold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div></TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort('category')}><div className="flex items-center gap-1">Category {sortConfig.key === 'category' && <span className="text-rose-gold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div></TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort('type')}><div className="flex items-center gap-1">Type {sortConfig.key === 'type' && <span className="text-rose-gold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div></TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort('location')}><div className="flex items-center gap-1">Location {sortConfig.key === 'location' && <span className="text-rose-gold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div></TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort('google_rating')}><div className="flex items-center gap-1">Google Rating {sortConfig.key === 'google_rating' && <span className="text-rose-gold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div></TableHead>
+                                    <TableHead className="cursor-pointer hover:bg-slate-50" onClick={() => handleSort('heart_rating')}><div className="flex items-center gap-1">Heart Rating {sortConfig.key === 'heart_rating' && <span className="text-rose-gold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div></TableHead>
                                     <TableHead>Exclusive</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {vendors.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center p-4">No Vendors Found</TableCell></TableRow> :
-                                    vendors.map((v) => (
+                                {displayVendors.length === 0 ? <TableRow><TableCell colSpan={9} className="text-center p-4">No Businesses Found</TableCell></TableRow> :
+                                    displayVendors.map((v) => (
                                         <TableRow key={v.id}>
                                             <TableCell className="font-mono text-xs text-muted-foreground">{v.id.slice(0, 8)}...</TableCell>
                                             <TableCell className="font-medium">{v.name}</TableCell>
-                                            <TableCell><Badge variant="outline">{v.type}</Badge></TableCell>
+                                            <TableCell>
+                                                <Badge variant="secondary" className={
+                                                    v.category === 'venue' ? 'bg-blue-100 text-blue-700' :
+                                                        v.category === 'planner' ? 'bg-purple-100 text-purple-700' :
+                                                            'bg-green-100 text-green-700'
+                                                }>
+                                                    {v.category || 'vendor'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell><Badge variant="outline">{v.category === 'venue' ? v.venue_type : v.type}</Badge></TableCell>
                                             <TableCell>{v.location}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
@@ -736,56 +901,6 @@ const AdminDashboard = () => {
                     </div></Card>
                 </TabsContent>
 
-                {/* --- VENUES TAB --- */}
-                <TabsContent value="venues">
-                    <div className="flex justify-end mb-4">
-                        <Button className="gap-2 bg-rose-gold hover:bg-rose-600" onClick={() => handleOpenEditor('venue')}><Plus className="w-4 h-4" /> Add Venue</Button>
-                    </div>
-                    <Card><div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Venue Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Guests</TableHead>
-                                    <TableHead>Google Rating</TableHead>
-                                    <TableHead>Heart Rating</TableHead>
-                                    <TableHead>Exclusive</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {venues.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center p-4">No Venues Found</TableCell></TableRow> :
-                                    venues.map((v) => (
-                                        <TableRow key={v.id}>
-                                            <TableCell className="font-medium">{v.name}</TableCell>
-                                            <TableCell><Badge variant="outline">{v.type}</Badge></TableCell>
-                                            <TableCell>{v.location}</TableCell>
-                                            <TableCell>{v.capacity}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                                    {v.google_rating} <span className="text-xs text-muted-foreground">({v.google_reviews})</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
-                                                    {v.heart_rating}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{v.exclusive ? <Badge className="bg-rose-100 text-rose-600">Yes</Badge> : "No"}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditor('venue', v)}><Edit className="w-4 h-4" /></Button>
-                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(v.id, 'venue')}><Trash2 className="w-4 h-4" /></Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                            </TableBody>
-                        </Table>
-                    </div></Card>
-                </TabsContent>
 
                 {/* --- WEDDINGS TAB --- */}
                 <TabsContent value="weddings">

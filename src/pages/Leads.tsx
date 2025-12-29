@@ -1,93 +1,510 @@
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, User, Calendar, Clock, Filter, SlidersHorizontal, Search } from "lucide-react";
+import {
+    MessageSquare,
+    User,
+    Calendar,
+    Clock,
+    Filter,
+    Search,
+    Heart,
+    Star,
+    ChevronRight,
+    Loader2,
+    Mail,
+    Phone,
+    MapPin,
+    ArrowUpRight,
+    Plus
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/lib/supabase";
+import { useBusiness } from "@/context/BusinessContext";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 
-export default function Leads() {
-    // Mock Data - In a real app, fetch from Supabase 'leads' or 'inquiries' table
-    // For now, we simulate leads for this specific venue
-    const leads = [
-        { id: 1, name: "Sarah & Mike", type: "Ceremony + Reception", date: "Oct 12, 2024", guests: 120, status: "New", color: "bg-rose-500", budget: "$15k - $20k" },
-        { id: 2, name: "Jessica L.", type: "Reception Only", date: "Dec 1, 2024", guests: 85, status: "Pending", color: "bg-amber-500", budget: "$10k" },
-        { id: 3, name: "The Millers", type: "Full Weekend Buyout", date: "June 15, 2025", guests: 200, status: "Replied", color: "bg-blue-500", budget: "$45k+" },
-        { id: 4, name: "David & Tom", type: "Ceremony + Reception", date: "Feb 14, 2025", guests: 150, status: "New", color: "bg-purple-500", budget: "$25k" },
-    ];
+interface Lead {
+    id: string;
+    client_name: string;
+    client_email: string;
+    status: 'New' | 'Contacted' | 'Contract Sent' | 'Booked';
+    created_at: string;
+    event_date: string | null;
+    budget: string | null;
+    asset_id: string;
+    asset_image: string;
+    asset_category: string;
+    swipe_type: 'RIGHT' | 'SUPER_LIKE';
+    // Pricing metadata
+    cost_model?: string;
+    base_cost?: number;
+    min_service_fee_pct?: number;
+    user_id: string;
+}
+
+export default function LeadResponseSystem() {
+    const { businessProfile, isLoading: businessLoading } = useBusiness();
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Quote Modal State
+    const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+    const [quantity, setQuantity] = useState(1);
+    const [unitPrice, setUnitPrice] = useState(0);
+    const [submitting, setSubmitting] = useState(false);
+
+    const selectedLead = leads.find(l => l.id === selectedLeadId);
+
+    useEffect(() => {
+        if (selectedLead && isQuoteModalOpen) {
+            setUnitPrice(selectedLead.base_cost || 0);
+            // Default quantity based on cost model
+            if (selectedLead.cost_model === 'per_guest') {
+                setQuantity(100); // Default placeholder for guests
+            } else {
+                setQuantity(1);
+            }
+        }
+    }, [selectedLead, isQuoteModalOpen]);
+
+    useEffect(() => {
+        if (businessProfile?.id) {
+            fetchLeadsFromSwipes();
+        }
+    }, [businessProfile?.id]);
+
+    const fetchLeadsFromSwipes = async () => {
+        setLoading(true);
+        try {
+            // Query user_swipes for this vendor's assets
+            const { data: swipes, error } = await supabase
+                .from('user_swipes')
+                .select(`
+                    id,
+                    swipe_direction,
+                    swiped_at,
+                    asset_id,
+                    inspiration_assets (
+                        image_url,
+                        category_tag,
+                        cost_model,
+                        base_cost_low,
+                        base_cost_high,
+                        min_service_fee_pct
+                    ),
+                    profiles (
+                        id,
+                        full_name,
+                        email
+                    )
+                `)
+                .neq('swipe_direction', 'LEFT')
+                .eq('inspiration_assets.vendor_id', businessProfile!.id);
+
+            if (error) throw error;
+
+            // Map swipes to Lead interface
+            const mappedLeads: Lead[] = (swipes as any[] || []).map(s => {
+                const profile = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
+                const asset = Array.isArray(s.inspiration_assets) ? s.inspiration_assets[0] : s.inspiration_assets;
+
+                return {
+                    id: s.id,
+                    client_name: profile?.full_name || "New Couple",
+                    client_email: profile?.email || "",
+                    status: 'New',
+                    created_at: s.swiped_at,
+                    event_date: null,
+                    budget: null,
+                    asset_id: s.asset_id,
+                    asset_image: asset?.image_url || "",
+                    asset_category: asset?.category_tag || "",
+                    swipe_type: s.swipe_direction as 'RIGHT' | 'SUPER_LIKE',
+                    cost_model: asset?.cost_model,
+                    base_cost: asset?.base_cost_low,
+                    min_service_fee_pct: asset?.min_service_fee_pct,
+                    user_id: profile?.id
+                };
+            });
+
+            setLeads(mappedLeads);
+            if (mappedLeads.length > 0 && !selectedLeadId) setSelectedLeadId(mappedLeads[0].id);
+        } catch (error) {
+            console.error("Error fetching leads:", error);
+            toast.error("Failed to load leads");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredLeads = leads.filter(l =>
+        l.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        l.asset_category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const handleUpdateStatus = (status: Lead['status']) => {
+        // In a real app, we'd update a 'leads' table or 'lead_status' in swipes
+        toast.info(`Status updated to ${status}`);
+        setLeads(prev => prev.map(l => l.id === selectedLeadId ? { ...l, status } : l));
+    };
+
+    const handleSaveQuote = async () => {
+        if (!selectedLead || !businessProfile?.id) return;
+        setSubmitting(true);
+
+        const subtotal = quantity * unitPrice;
+        const feePct = selectedLead.min_service_fee_pct || 20;
+        const serviceFee = subtotal * (feePct / 100);
+        const tax = subtotal * 0.08;
+        const grandTotal = subtotal + serviceFee + tax;
+
+        try {
+            const { data, error } = await supabase
+                .from('quotes')
+                .insert([{
+                    vendor_id: businessProfile.id,
+                    user_id: selectedLead.user_id,
+                    status: 'DRAFT',
+                    items: [{
+                        description: selectedLead.asset_category,
+                        quantity,
+                        unit_price: unitPrice * 100 // Convert to cents
+                    }],
+                    subtotal_cents: Math.round(subtotal * 100),
+                    tax_cents: Math.round(tax * 100),
+                    service_fee_cents: Math.round(serviceFee * 100),
+                    grand_total_cents: Math.round(grandTotal * 100),
+                    notes: `Quote generated from ${selectedLead.asset_category} inspiration swipe.`
+                }])
+                .select();
+
+            if (error) throw error;
+
+            toast.success("Quote draft created!");
+            setIsQuoteModalOpen(false);
+            handleUpdateStatus('Contacted');
+        } catch (error) {
+            console.error("Error creating quote:", error);
+            toast.error("Failed to create quote");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (businessLoading || (loading && leads.length === 0)) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div className="flex flex-col h-[calc(100vh-140px)] animate-in fade-in duration-700 bg-gray-50">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                    <h1 className="text-3xl font-serif font-bold text-brand-navy">Inquiries & Leads</h1>
-                    <p className="text-slate-500 mt-1">Manage incoming requests and potential bookings.</p>
+                    <h1 className="text-3xl font-serif font-bold tracking-tight text-slate-900">Lead Response System</h1>
+                    <p className="text-slate-600 mt-1">Manage inquiries generated from your portfolio swipes.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" className="gap-2"><Filter className="w-4 h-4" /> Filter</Button>
-                    <Button className="bg-brand-navy text-white">Export CSV</Button>
+                <div className="flex items-center gap-2 bg-white border border-slate-200 p-1 rounded-xl">
+                    <Button variant="ghost" size="sm" className="bg-slate-100 text-slate-900">Active</Button>
+                    <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">Archived</Button>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-white p-2 rounded-lg border shadow-sm">
-                <Search className="w-5 h-5 text-slate-400 ml-2" />
-                <Input className="border-none shadow-none focus-visible:ring-0" placeholder="Search by name, date, or status..." />
-            </div>
+            <div className="flex-1 flex gap-6 overflow-hidden">
+                {/* Left Panel: Lead List */}
+                <div className="w-full lg:w-96 flex flex-col gap-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <Input
+                            className="bg-white border-slate-200 pl-10 h-12 rounded-xl focus-visible:ring-rose-500 text-slate-900"
+                            placeholder="Search leads..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
 
-            <div className="grid gap-4">
-                {leads.map((lead) => (
-                    <Card key={lead.id} className="border-none shadow-sm hover:shadow-md transition-all group cursor-pointer hover:border-l-4 hover:border-l-rose-gold">
-                        <CardContent className="p-6">
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl ${lead.color}`}>
-                                        {lead.name[0]}
+                    <ScrollArea className="flex-1 bg-white border border-slate-200 rounded-2xl">
+                        <div className="p-2 space-y-1">
+                            {filteredLeads.length === 0 ? (
+                                <div className="p-8 text-center text-slate-500">No leads found.</div>
+                            ) : filteredLeads.map((lead) => (
+                                <div
+                                    key={lead.id}
+                                    onClick={() => setSelectedLeadId(lead.id)}
+                                    className={`p-4 rounded-xl cursor-pointer transition-all flex items-center gap-4 group ${selectedLeadId === lead.id
+                                        ? "bg-rose-50 border-l-4 border-rose-500"
+                                        : "hover:bg-slate-50 border-l-4 border-transparent"
+                                        }`}
+                                >
+                                    <div className="relative">
+                                        <Avatar className="w-12 h-12 border-2 border-slate-200">
+                                            <AvatarFallback className="bg-rose-500/10 text-rose-500 font-bold">
+                                                {lead.client_name[0]}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        {lead.swipe_type === 'SUPER_LIKE' && (
+                                            <div className="absolute -top-1 -right-1 bg-blue-500 p-1 rounded-full border-2 border-white">
+                                                <Star className="w-2 h-2 text-white fill-current" />
+                                            </div>
+                                        )}
                                     </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="font-bold truncate text-sm text-slate-900">{lead.client_name}</h4>
+                                            <span className="text-[10px] text-slate-500 uppercase font-black tracking-tighter">
+                                                {format(parseISO(lead.created_at), 'MMM d')}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 truncate mt-0.5">{lead.asset_category} Inquiry</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border-slate-300 ${lead.status === 'New' ? 'text-rose-500' : 'text-slate-600'
+                                                }`}>
+                                                {lead.status}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className={`w-4 h-4 text-slate-700 transition-transform ${selectedLeadId === lead.id ? "rotate-90 text-rose-500" : ""
+                                        }`} />
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </div>
+
+                {/* Right Panel: Lead Detail */}
+                <div className="hidden lg:flex flex-1 flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                    {selectedLead ? (
+                        <div className="flex flex-col h-full">
+                            <div className="p-8 border-b border-slate-200 bg-slate-50 flex justify-between items-start">
+                                <div className="flex gap-6">
+                                    <Avatar className="w-20 h-20 border-4 border-slate-200">
+                                        <AvatarFallback className="bg-rose-500/10 text-rose-500 text-3xl font-serif">
+                                            {selectedLead.client_name[0]}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div>
-                                        <h3 className="font-bold text-lg text-brand-navy flex items-center gap-2">
-                                            {lead.name}
-                                            {lead.status === 'New' && <Badge className="bg-rose-500 h-5 px-1.5 text-[10px]">NEW</Badge>}
-                                        </h3>
-                                        <p className="text-sm text-slate-500 flex items-center gap-2 mt-1">
-                                            <Calendar className="w-3.5 h-3.5" /> {lead.date}
-                                            <span className="text-slate-300">|</span>
-                                            <User className="w-3.5 h-3.5" /> {lead.guests} Guests
+                                        <div className="flex items-center gap-3">
+                                            <h2 className="text-3xl font-serif font-bold text-slate-900">{selectedLead.client_name}</h2>
+                                            {selectedLead.swipe_type === 'SUPER_LIKE' && (
+                                                <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">Super Like</Badge>
+                                            )}
+                                        </div>
+                                        <p className="text-slate-600 flex items-center gap-4 mt-2">
+                                            <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-rose-400" /> {selectedLead.client_email}</span>
+                                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-rose-400" /> Florida, US</span>
                                         </p>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center justify-between w-full sm:w-auto gap-8">
-                                    <div className="text-left sm:text-right">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Budget</p>
-                                        <p className="font-medium text-brand-navy">{lead.budget}</p>
-                                    </div>
-                                    <div className="text-left sm:text-right hidden sm:block">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</p>
-                                        <Badge variant="outline" className={`mt-1 border-slate-200 ${lead.status === 'New' ? 'text-rose-500 bg-rose-50' : 'text-slate-600'}`}>
-                                            {lead.status}
-                                        </Badge>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button size="icon" variant="ghost" className="text-slate-400 hover:text-brand-navy hover:bg-slate-100"><MessageSquare className="w-5 h-5" /></Button>
-                                    </div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" className="border-slate-300">
+                                        Archive
+                                    </Button>
+                                    <Button
+                                        className="bg-rose-600 hover:bg-rose-700"
+                                        onClick={() => setIsQuoteModalOpen(true)}
+                                    >
+                                        Generate Quote
+                                    </Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                ))}
+
+                            <ScrollArea className="flex-1 p-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <section>
+                                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                                <Heart className="w-3 h-3 text-rose-500" /> The Inspiration
+                                            </h3>
+                                            <Card className="bg-white border-slate-200 overflow-hidden group">
+                                                <div className="aspect-video relative overflow-hidden">
+                                                    <img
+                                                        src={selectedLead.asset_image}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        alt="Liked asset"
+                                                    />
+                                                </div>
+                                                <CardContent className="p-4 flex justify-between items-center">
+                                                    <div>
+                                                        <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Category</p>
+                                                        <p className="font-bold text-slate-900">{selectedLead.asset_category}</p>
+                                                    </div>
+                                                    <Button variant="ghost" size="sm" className="text-rose-400 hover:text-rose-300">
+                                                        View Asset <ArrowUpRight className="w-3 h-3 ml-1" />
+                                                    </Button>
+                                                </CardContent>
+                                            </Card>
+                                        </section>
+
+                                        <section className="bg-white border border-slate-200 rounded-xl p-6">
+                                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                                <Clock className="w-3 h-3 text-rose-500" /> Activity History
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div className="flex gap-3">
+                                                    <div className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                                                    <div className="text-sm">
+                                                        <p className="font-bold text-slate-900">Swiped {selectedLead.swipe_type === 'RIGHT' ? 'Right' : 'SUPER LIKE'}</p>
+                                                        <p className="text-slate-500 text-xs">{format(parseISO(selectedLead.created_at), 'MMMM d, yyyy h:mm a')}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <section className="bg-white border border-slate-200 rounded-xl p-6">
+                                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+                                                <Star className="w-3 h-3 text-rose-500" /> Manage Status
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {[
+                                                    { id: 'New', color: 'bg-rose-500' },
+                                                    { id: 'Contacted', color: 'bg-indigo-500' },
+                                                    { id: 'Contract Sent', color: 'bg-amber-500' },
+                                                    { id: 'Booked', color: 'bg-emerald-500' }
+                                                ].map((stat) => (
+                                                    <Button
+                                                        key={stat.id}
+                                                        variant="outline"
+                                                        onClick={() => handleUpdateStatus(stat.id as any)}
+                                                        className={`border-slate-800 text-xs justify-start px-3 py-6 h-auto ${selectedLead.status === stat.id
+                                                            ? `bg-slate-800 border-l-4 border-l-rose-500 text-white`
+                                                            : "bg-slate-900/50 text-slate-400 hover:bg-slate-800"
+                                                            }`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full mr-3 ${stat.color}`} />
+                                                        {stat.id}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </section>
+
+                                        <section className="bg-indigo-600 text-white rounded-xl p-6 relative overflow-hidden group shadow-xl">
+                                            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:rotate-12 transition-transform">
+                                                <MessageSquare className="w-16 h-16" />
+                                            </div>
+                                            <h4 className="text-xl font-serif text-xl font-bold mb-2">Lead Conversion Tip</h4>
+                                            <p className="text-xs text-indigo-100 mb-4">
+                                                Couples who receive a reply within 4 hours are 3x more likely to book. Try sending a quick "Hey, loved that you liked our floral style!"
+                                            </p>
+                                            <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-bold rounded-lg">
+                                                Send Quick Reply
+                                            </Button>
+                                        </section>
+                                    </div>
+                                </div>
+                            </ScrollArea>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-20 text-slate-500">
+                            <MessageSquare className="w-16 h-16 mb-4 opacity-20" />
+                            <h3 className="text-xl font-serif">Select a lead to start conversion</h3>
+                            <p className="text-sm mt-2">Pick a couple from the left to view their inspiration and start chatting.</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <Card className="border-dashed border-2 bg-slate-50/50">
-                <CardContent className="p-12 text-center">
-                    <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-serif font-bold text-slate-600">Looking for more leads?</h3>
-                    <p className="text-sm text-slate-400 max-w-xs mx-auto mt-2">
-                        Optimize your venue profile with high-quality photos and detailed amenities to rank higher in search results.
-                    </p>
-                    <Button variant="link" className="text-rose-gold mt-2" onClick={() => window.location.href = '/business'}>
-                        Update Profile &rarr;
-                    </Button>
-                </CardContent>
-            </Card>
+            {/* Generate Quote Dialog */}
+            <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
+                <DialogContent className="bg-white border-slate-200 max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-serif">Generate Quote for {selectedLead?.client_name}</DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            Create a detailed quote based on the inspiration swiped.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <Label>Base Service/Item</Label>
+                                <Input value={selectedLead?.asset_category} disabled className="bg-slate-800 border-slate-700" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Pricing Model</Label>
+                                <Input value={selectedLead?.cost_model?.replace('_', ' ').toUpperCase()} disabled className="bg-slate-800 border-slate-700" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Units/Quantity</Label>
+                                    <Input
+                                        type="number"
+                                        value={quantity}
+                                        onChange={e => setQuantity(Number(e.target.value))}
+                                        className="bg-slate-800 border-slate-700"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Unit Price ($)</Label>
+                                    <Input
+                                        type="number"
+                                        value={unitPrice}
+                                        onChange={e => setUnitPrice(Number(e.target.value))}
+                                        className="bg-slate-800 border-slate-700"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-800 pb-2">Estimated Total</h4>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Subtotal</span>
+                                    <span>${(quantity * unitPrice).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Service Fee ({selectedLead?.min_service_fee_pct || 20}%)</span>
+                                    <span>${((quantity * unitPrice) * (selectedLead?.min_service_fee_pct || 20) / 100).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-400">Tax (8%)</span>
+                                    <span>${((quantity * unitPrice) * 0.08).toFixed(2)}</span>
+                                </div>
+                                <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
+                                    <span className="font-bold">Grand Total</span>
+                                    <span className="text-2xl font-serif text-rose-500 font-bold">
+                                        ${((quantity * unitPrice) * (1 + (selectedLead?.min_service_fee_pct || 20) / 100 + 0.08)).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" className="border-slate-800 hover:bg-slate-800" onClick={() => setIsQuoteModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            className="bg-rose-600 hover:bg-rose-700"
+                            onClick={handleSaveQuote}
+                            disabled={submitting}
+                        >
+                            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                            Create Quote
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

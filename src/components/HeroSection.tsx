@@ -43,7 +43,7 @@ export const HeroSection = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-primary-foreground/80 text-lg md:text-xl max-w-2xl mx-auto mb-10"
+            className="text-primary-foreground text-lg md:text-xl max-w-2xl mx-auto mb-10"
           >
             Connect with top wedding vendors, discover stunning venues, and find
             inspiration from real weddings to plan your perfect day.
@@ -118,7 +118,7 @@ export const HeroSection = () => {
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <p className="font-serif text-2xl md:text-3xl font-semibold">{stat.number}</p>
-              <p className="text-sm text-primary-foreground/70">{stat.label}</p>
+              <p className="text-sm text-primary-foreground">{stat.label}</p>
             </div>
           ))}
         </motion.div>

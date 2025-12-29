@@ -38,7 +38,7 @@ export const Footer = () => {
               <h3 className="font-serif text-2xl md:text-3xl mb-3">
                 Get Wedding Inspiration Delivered
               </h3>
-              <p className="text-primary-foreground/70 mb-6">
+              <p className="text-primary-foreground mb-6">
                 Subscribe to receive the latest real weddings, planning tips, and exclusive offers.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -67,20 +67,20 @@ export const Footer = () => {
                 2Plan<span className="text-champagne">A</span>Wedding
               </span>
             </Link>
-            <p className="text-primary-foreground/60 text-sm mb-6">
+            <p className="text-primary-foreground text-sm mb-6">
               Connecting couples with the best wedding professionals to create unforgettable celebrations.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+              <a href="#" className="text-primary-foreground hover:text-primary-foreground transition-colors">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+              <a href="#" className="text-primary-foreground hover:text-primary-foreground transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+              <a href="#" className="text-primary-foreground hover:text-primary-foreground transition-colors">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+              <a href="#" className="text-primary-foreground hover:text-primary-foreground transition-colors">
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
@@ -94,7 +94,7 @@ export const Footer = () => {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors"
+                    className="text-primary-foreground hover:text-primary-foreground text-sm transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -111,7 +111,7 @@ export const Footer = () => {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors"
+                    className="text-primary-foreground hover:text-primary-foreground text-sm transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -128,7 +128,7 @@ export const Footer = () => {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors"
+                    className="text-primary-foreground hover:text-primary-foreground text-sm transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -145,7 +145,7 @@ export const Footer = () => {
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-primary-foreground/60 hover:text-primary-foreground text-sm transition-colors"
+                    className="text-primary-foreground hover:text-primary-foreground text-sm transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -157,10 +157,10 @@ export const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-primary-foreground/50 text-sm">
+          <p className="text-primary-foreground text-sm">
             © {new Date().getFullYear()} 2PlanAWedding. All rights reserved.
           </p>
-          <p className="text-primary-foreground/50 text-sm flex items-center gap-1">
+          <p className="text-primary-foreground text-sm flex items-center gap-1">
             Made with <Heart className="w-4 h-4 text-rose-gold fill-rose-gold" /> for couples everywhere
           </p>
         </div>

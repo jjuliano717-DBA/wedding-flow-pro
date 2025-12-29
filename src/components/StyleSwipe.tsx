@@ -6,41 +6,58 @@ import { useAuth } from "@/context/AuthContext";
 import { Heart, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
-// Matrix Data Structure
-const ARCHETYPES = ['Minimalist', 'Boho', 'Classic', 'Moody', 'Whimsical'];
+// Matrix Data Structure - Aligned with Onboarding Wizard (12 Wedding Styles)
+const ARCHETYPES = ['Intimate', 'Boho', 'Rustic', 'Unique', 'Artistic & Thematic', 'Nautical', 'Tropical & Destination', 'Romantic', 'Garden & Fairytale', 'Traditional', 'Formal', 'Modern', 'Urban'];
 const CATEGORIES = ['Vibe', 'Venue', 'Florals', 'Decor'];
 
-// Helper to generate a consistent matrix of cards
+// Helper to generate a consistent matrix of cards (20 cards across 12 styles)
 const STYLE_MATRIX = [
-    // Minimalist
-    { archetype: 'Minimalist', category: 'Vibe', label: 'Clean & Bright', img: 'https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Minimalist', category: 'Venue', label: 'Industrial Loft', img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Minimalist', category: 'Florals', label: 'Single Stem', img: 'https://images.unsplash.com/photo-1596435016830-1017b2b51685?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Minimalist', category: 'Decor', label: 'Ghost Chairs', img: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=600' },
+    // Intimate (2 cards)
+    { archetype: 'Intimate', category: 'Vibe', label: 'Close & Personal', img: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?w=600&h=800&fit=crop' },
+    { archetype: 'Intimate', category: 'Venue', label: 'Small Gathering', img: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&h=800&fit=crop' },
 
-    // Boho
-    { archetype: 'Boho', category: 'Vibe', label: 'Warm & Earthy', img: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Boho', category: 'Venue', label: 'Desert / Forest', img: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Boho', category: 'Florals', label: 'Dried Grasses', img: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Boho', category: 'Decor', label: 'Macramé Details', img: 'https://images.unsplash.com/photo-1588602528760-b620b78c85fa?auto=format&fit=crop&q=80&w=600' },
+    // Boho (2 cards)
+    { archetype: 'Boho', category: 'Vibe', label: 'Free-Spirited', img: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=600&h=800&fit=crop' },
+    { archetype: 'Boho', category: 'Florals', label: 'Wildflower Vibes', img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&h=800&fit=crop' },
 
-    // Classic
-    { archetype: 'Classic', category: 'Vibe', label: 'Timeless Elegance', img: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Classic', category: 'Venue', label: 'Ballroom Estate', img: 'https://images.unsplash.com/photo-1519225421980-715cb0202128?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Classic', category: 'Florals', label: 'White Roses', img: 'https://images.unsplash.com/photo-1562690868-60bbe7293e94?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Classic', category: 'Decor', label: 'Crystal & Gold', img: 'https://images.unsplash.com/photo-1530023367847-a683933f4172?auto=format&fit=crop&q=80&w=600' },
+    // Rustic (2 cards)
+    { archetype: 'Rustic', category: 'Venue', label: 'Barn & Country', img: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=600&h=800&fit=crop' },
+    { archetype: 'Rustic', category: 'Decor', label: 'Natural Wood', img: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=600&h=800&fit=crop' },
 
-    // Moody
-    { archetype: 'Moody', category: 'Vibe', label: 'Dark & Edgy', img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Moody', category: 'Venue', label: 'Speakeasy / Vault', img: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Moody', category: 'Florals', label: 'Deep Burgundy', img: 'https://images.unsplash.com/photo-1596395279361-b1e194e43f55?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Moody', category: 'Decor', label: 'Neon & Velvet', img: 'https://images.unsplash.com/photo-1555529733-0e670560f7e1?auto=format&fit=crop&q=80&w=600' },
+    // Unique (2 cards)
+    { archetype: 'Unique', category: 'Vibe', label: 'One of a Kind', img: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&h=800&fit=crop' },
+    { archetype: 'Unique', category: 'Decor', label: 'Unexpected Details', img: 'https://images.unsplash.com/photo-1530023367847-a683933f4172?w=600&h=800&fit=crop' },
 
-    // Whimsical
-    { archetype: 'Whimsical', category: 'Vibe', label: 'Playful Color', img: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Whimsical', category: 'Venue', label: 'Garden Tent', img: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Whimsical', category: 'Florals', label: 'Wildflowers', img: 'https://images.unsplash.com/photo-1470240731273-7821a6eeb6bd?auto=format&fit=crop&q=80&w=600' },
-    { archetype: 'Whimsical', category: 'Decor', label: 'Fairy Lights', img: 'https://images.unsplash.com/photo-1516142514652-32b0051bf78e?auto=format&fit=crop&q=80&w=600' },
+    // Artistic & Thematic (2 cards)
+    { archetype: 'Artistic & Thematic', category: 'Vibe', label: 'Creative Expression', img: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=600&h=800&fit=crop' },
+    { archetype: 'Artistic & Thematic', category: 'Decor', label: 'Bold Statements', img: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=600&h=800&fit=crop' },
+
+    // Nautical (1 card)
+    { archetype: 'Nautical', category: 'Venue', label: 'Waterfront Views', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop' },
+
+    // Tropical & Destination (2 cards)
+    { archetype: 'Tropical & Destination', category: 'Vibe', label: 'Beach Paradise', img: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=600&h=800&fit=crop' },
+    { archetype: 'Tropical & Destination', category: 'Venue', label: 'Exotic Locale', img: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=600&h=800&fit=crop' },
+
+    // Romantic (2 cards)
+    { archetype: 'Romantic', category: 'Vibe', label: 'Soft & Dreamy', img: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=800&fit=crop' },
+    { archetype: 'Romantic', category: 'Florals', label: 'Lush Blooms', img: 'https://images.unsplash.com/photo-1544124971-e962be8c47f7?w=600&h=800&fit=crop' },
+
+    // Garden & Fairytale (2 cards)
+    { archetype: 'Garden & Fairytale', category: 'Venue', label: 'Enchanted Garden', img: 'https://images.unsplash.com/photo-1525258437598-0fae8f1e1ed5?w=600&h=800&fit=crop' },
+    { archetype: 'Garden & Fairytale', category: 'Decor', label: 'Whimsical Magic', img: 'https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=600&h=800&fit=crop' },
+
+    // Traditional (1 card)
+    { archetype: 'Traditional', category: 'Vibe', label: 'Classic Ceremony', img: 'https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=600&h=800&fit=crop' },
+
+    // Formal (1 card)
+    { archetype: 'Formal', category: 'Venue', label: 'Black Tie Affair', img: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?w=600&h=800&fit=crop' },
+
+    // Modern (1 card)
+    { archetype: 'Modern', category: 'Vibe', label: 'Contemporary Chic', img: 'https://images.unsplash.com/photo-1460978812857-470ed1c77af0?w=600&h=800&fit=crop' },
+
+    // Urban (1 card)
+    { archetype: 'Urban', category: 'Venue', label: 'City Skyline', img: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&h=800&fit=crop' },
 ];
 
 export const StyleSwipe = ({ onComplete }: { onComplete?: () => void }) => {
@@ -82,22 +99,22 @@ export const StyleSwipe = ({ onComplete }: { onComplete?: () => void }) => {
         const max2 = sorted[1];
 
         let resultString = "";
-        let primaryArchetype = max1 ? max1[0] : 'Classic';
+        let primaryArchetype = max1 ? max1[0] : 'Modern';
         let secondaryArchetype = null;
 
         // 2. Apply Threshold Logic
         if (!max2) {
-            resultString = `Seems you have a ${primaryArchetype} Wedding Style.`;
+            resultString = `Your wedding style is ${primaryArchetype}.`;
         } else {
             const score1 = max1[1];
             const score2 = max2[1];
             const delta = score1 - score2;
 
             if (delta > 2) {
-                resultString = `Seems you have a ${primaryArchetype} Wedding Style.`;
+                resultString = `Your wedding style is ${primaryArchetype}.`;
             } else {
                 secondaryArchetype = max2[0];
-                resultString = `Seems you have a ${primaryArchetype} and ${secondaryArchetype} Wedding Style.`;
+                resultString = `Your wedding style is ${primaryArchetype} & ${secondaryArchetype}.`;
             }
         }
 
@@ -147,10 +164,10 @@ export const StyleSwipe = ({ onComplete }: { onComplete?: () => void }) => {
                         alt="Result Style"
                         className="absolute inset-0 w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6 text-white text-center">
                         <p className="tracking-widest uppercase text-sm font-medium opacity-90">Your Match</p>
-                        <h3 className="text-3xl font-serif font-bold">{result?.winner}</h3>
+                        <h3 className="text-3xl font-serif font-bold text-white">{result?.winner}</h3>
                     </div>
                 </Card>
 
@@ -181,11 +198,11 @@ export const StyleSwipe = ({ onComplete }: { onComplete?: () => void }) => {
                     alt={currentCard.label}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white text-center">
-                    <p className="text-sm font-medium opacity-80 uppercase tracking-widest mb-1">{currentCard.archetype}</p>
-                    <h3 className="text-3xl font-serif font-bold">{currentCard.label}</h3>
+                    <p className="text-sm font-medium opacity-90 uppercase tracking-widest mb-1">{currentCard.archetype}</p>
+                    <h3 className="text-3xl font-serif font-bold text-white">{currentCard.label}</h3>
                 </div>
             </Card>
 

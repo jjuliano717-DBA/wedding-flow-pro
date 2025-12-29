@@ -1,224 +1,186 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { getCompositeRankedVendors, CompositeMatch } from "@/lib/matcher";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, DollarSign, Calendar, Heart, ArrowRight } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import {
+    Users,
+    Calendar,
+    ChevronDown,
+    LayoutDashboard,
+    MessageSquare,
+    Briefcase,
+    Clock,
+    TrendingUp,
+    Plus,
+    Search,
+    ArrowRight
+} from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+    DropdownMenuLabel
+} from "@/components/ui/dropdown-menu";
 
 export default function Planner() {
     const { user } = useAuth();
-    const [matches, setMatches] = useState<CompositeMatch[]>([]);
-    const stress = user?.stressLevel || 5;
-
-    useEffect(() => {
-        const fetchAndRankVendors = async () => {
-            if (user) {
-                const { data: vendors, error } = await supabase.from('vendors').select('*');
-
-                if (error) {
-                    console.error("Error fetching vendors:", error);
-                    return;
-                }
-
-                if (vendors && vendors.length > 0) {
-                    const mappedVendors: any[] = vendors.map(v => ({
-                        id: v.id,
-                        name: v.name,
-                        category: v.category || 'Venue',
-                        priceTier: v.price_tier || 2,
-                        styleTags: v.style_tags || [],
-                        rating: v.rating || 5.0,
-                        imageUrl: v.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800',
-                        location: v.location || 'Miami, FL',
-                        description: v.description || 'Verified Vendor',
-                        hub: 'Miami',
-                        styleVector: (v.style_tags || []).reduce((acc: any, tag: string) => {
-                            acc[tag] = 1;
-                            return acc;
-                        }, {})
-                    }));
-
-                    const ranked = getCompositeRankedVendors(mappedVendors, user);
-                    setMatches(ranked.slice(0, 4));
-                }
-            }
-        };
-
-        fetchAndRankVendors();
-    }, [user]);
-
-    const getTipContent = () => {
-        if (stress > 7) {
-            return {
-                title: "Deep Breaths 🌿",
-                text: "You're doing great. Today, just choose ONE small thing easily done. Maybe just pick a font? Or hydrate.",
-                color: "bg-blue-50 text-blue-800 border-blue-200"
-            };
-        } else if (stress < 4) {
-            return {
-                title: "You're on Fire! 🔥",
-                text: "High energy day! Perfect time to tackle the big contracts or negotiate with venues.",
-                color: "bg-green-50 text-green-800 border-green-200"
-            };
-        }
-        return {
-            title: "Steady Progress ✨",
-            text: "Stay consistent. Check your budget and maybe shortlist 3 photographers today.",
-            color: "bg-purple-50 text-purple-800 border-purple-200"
-        };
-    };
-
-    const tip = getTipContent();
+    const [selectedProject, setSelectedProject] = useState({ id: "1", name: "Sarah & Mike" });
+    const clients = [
+        { id: "1", name: "Sarah & Mike", date: "June 15, 2025", status: "Planning" },
+        { id: "2", name: "Jessica & Dan", date: "Sept 12, 2025", status: "Booking" },
+        { id: "3", name: "Robert & Lisa", date: "Dec 05, 2025", status: "Discovery" },
+    ];
 
     return (
-        <>
-            <div className="container mx-auto px-4 py-8 mt-16 max-w-6xl">
-                {/* Welcome Header */}
-                <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
-                    <div>
-                        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground">
-                            The Planner
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Welcome back, {(user?.fullName?.split(" ") || [])[0] || "Planner"}. Let's orchestrate your dream.
-                        </p>
-                    </div>
-                    <div className={`px-4 py-2 rounded-lg border ${tip.color} max-w-md`}>
-                        <div className="flex items-center gap-2 font-bold mb-1">
-                            <Sparkles className="w-4 h-4" /> {tip.title}
+        <div className="space-y-8 animate-in fade-in duration-700 bg-[#0F172A] text-white min-h-screen">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+                <div>
+                    <h1 className="text-3xl font-serif font-bold tracking-tight">Agency Dashboard</h1>
+                    <p className="text-slate-400">Managing {clients.length} active client projects.</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="bg-slate-800 border-slate-700 hover:bg-slate-700 text-white gap-2 px-4 py-6 rounded-xl">
+                                <div className="text-left">
+                                    <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Active Project</p>
+                                    <p className="text-sm font-bold">{selectedProject.name}</p>
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-slate-500" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-64 bg-slate-900 border-slate-700 text-white">
+                            <DropdownMenuLabel className="text-slate-500 text-[10px] uppercase font-bold px-3">Your Projects</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-slate-700" />
+                            {clients.map((client) => (
+                                <DropdownMenuItem
+                                    key={client.id}
+                                    onClick={() => setSelectedProject(client)}
+                                    className="px-3 py-3 focus:bg-slate-800 focus:text-white cursor-pointer"
+                                >
+                                    <div className="flex-1">
+                                        <p className="font-bold">{client.name}</p>
+                                        <p className="text-[10px] text-slate-500">{client.date} • {client.status}</p>
+                                    </div>
+                                </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator className="bg-slate-700" />
+                            <DropdownMenuItem className="px-3 py-3 focus:bg-slate-800 text-rose-400 font-bold gap-2">
+                                <Plus className="w-4 h-4" /> Create New Project
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-6 rounded-xl gap-2 transition-all">
+                        <MessageSquare className="w-4 h-4" /> Client Chat
+                    </Button>
+                </div>
+            </header>
+
+            {/* Planner KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[
+                    { label: "Active Clients", value: "8", icon: Users, color: "text-blue-400" },
+                    { label: "Bookings This Month", value: "12", icon: Briefcase, color: "text-green-400" },
+                    { label: "Client Inquiries", value: "24", icon: MessageSquare, color: "text-rose-400" },
+                    { label: "Average Stress", value: "Low", icon: TrendingUp, color: "text-yellow-400" },
+                ].map((kpi, i) => (
+                    <Card key={i} className="bg-slate-900/50 border-slate-800 shadow-none hover:bg-slate-900 transition-colors">
+                        <CardHeader className="pb-2 space-y-0">
+                            <div className="flex items-center justify-between mb-2">
+                                <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
+                                <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-500 font-bold uppercase">This Year</Badge>
+                            </div>
+                            <CardDescription className="text-[10px] uppercase font-bold tracking-widest text-slate-500">{kpi.label}</CardDescription>
+                            <CardTitle className="text-2xl font-bold font-serif">{kpi.value}</CardTitle>
+                        </CardHeader>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main: Global Calendar / Workflow */}
+                <div className="lg:col-span-2 space-y-8">
+                    <Card className="bg-slate-900/50 border-slate-800 shadow-none text-white">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="font-serif">Global Master Calendar</CardTitle>
+                                <CardDescription className="text-slate-500">Upcoming milestones across all your accounts.</CardDescription>
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-xs text-slate-400 hover:text-white">Full Schedule</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {[
+                                    { title: "Venue Tour: Sarah & Mike", date: "Tomorrow, 2:00 PM", type: "Visit", client: "Sarah & Mike" },
+                                    { title: "Floral Proposal Review", date: "Wednesday, 10:00 AM", type: "Budget", client: "Jessica & Dan" },
+                                    { title: "Final Tasting: Oceanfront", date: "Friday, 6:30 PM", type: "Food", client: "Robert & Lisa" }
+                                ].map((event, i) => (
+                                    <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-slate-950 border border-slate-800 group hover:border-slate-600 transition-all cursor-pointer">
+                                        <div className="w-12 h-12 rounded-lg bg-slate-900 flex flex-col items-center justify-center border border-slate-800 shrink-0">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase">{event.date.split(" ")[0].replace(",", "")}</p>
+                                            <p className="text-xs font-bold font-serif">{event.date.includes("Tomorrow") ? "TM" : event.date.split(" ")[0].slice(0, 3)}</p>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-sm group-hover:text-rose-400 transition-colors">{event.title}</h4>
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{event.client}</p>
+                                        </div>
+                                        <Badge variant="outline" className="border-slate-800 text-slate-500 text-[10px]">
+                                            {event.type}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Sidebar: Private Notes / Tools */}
+                <div className="space-y-8">
+                    <Card className="bg-slate-900 border-slate-800 shadow-xl text-white relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-rose-600"></div>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="font-serif text-lg">Black Book Access</CardTitle>
+                            <CardDescription className="text-slate-500">Quickly find and invite elite Florida providers.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Search your network..."
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                />
+                            </div>
+                            <Link to="/black-book">
+                                <Button className="w-full bg-slate-800 hover:bg-slate-700 text-white gap-2 text-xs py-5">
+                                    Open Black Book <ArrowRight className="w-3 h-3" />
+                                </Button>
+                            </Link>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-slate-900/50 border-slate-800 shadow-none text-white p-6">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-6 font-serif">Planner Reminders</h3>
+                        <div className="space-y-6">
+                            {[
+                                { text: "Follow up on Sarah's catering contract", urgent: true },
+                                { text: "Finalize moodboard for Jessica", urgent: false },
+                                { text: "Call Oceanfront Venue re: Lighting", urgent: false }
+                            ].map((note, i) => (
+                                <div key={i} className="flex gap-4 items-start">
+                                    <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${note.urgent ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'bg-slate-700'}`}></div>
+                                    <p className="text-xs text-slate-300 font-medium leading-relaxed">{note.text}</p>
+                                </div>
+                            ))}
                         </div>
-                        <p className="text-sm">{tip.text}</p>
-                    </div>
-                </div>
-
-                {/* Core Modules Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    {/* Style Module */}
-                    <Card className="hover:shadow-lg transition-shadow border-rose-100">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-rose-gold">
-                                <Heart className="w-5 h-5" /> My Style
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-32 rounded-md bg-cover bg-center mb-4 relative overflow-hidden" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1544124971-e962be8c47f7?q=80&w=400)' }}>
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 text-center">
-                                    <span className="text-white font-serif font-bold text-lg leading-tight">
-                                        {user?.stylePreferences?.primaryArchetype
-                                            ? `My Style = ${user.stylePreferences.primaryArchetype}${user.stylePreferences.secondaryArchetype ? ' & ' + user.stylePreferences.secondaryArchetype : ''}`
-                                            : "Start Matching"}
-                                    </span>
-                                </div>
-                            </div>
-                            <Link to="/style-matcher">
-                                <Button variant="outline" className="w-full">Update Vibe</Button>
-                            </Link>
-                        </CardContent>
                     </Card>
-
-                    {/* Budget Module */}
-                    <Card className="hover:shadow-lg transition-shadow border-green-100">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-green-700">
-                                <DollarSign className="w-5 h-5" /> Budget Advisor
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-col gap-2 mb-4">
-                                <div className="flex justify-between text-sm">
-                                    <span>Tier detected:</span>
-                                    <span className="font-bold">{user?.budgetTier || "Not set"}</span>
-                                </div>
-                                <Progress value={user?.budgetTier ? 75 : 0} className="h-2" />
-                                <p className="text-xs text-muted-foreground">Keep an eye on hidden fees.</p>
-                            </div>
-                            <Link to="/budget">
-                                <Button variant="outline" className="w-full">Manage Budget</Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
-
-                    {/* Vendors / Venues Quick Link */}
-                    <Card className="hover:shadow-lg transition-shadow border-indigo-100">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-indigo-700">
-                                <Calendar className="w-5 h-5" /> Directory
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <Link to="/venues">
-                                    <Button variant="ghost" className="w-full justify-start">Browse Venues</Button>
-                                </Link>
-                                <Link to="/vendors">
-                                    <Button variant="ghost" className="w-full justify-start">Find Vendors</Button>
-                                </Link>
-                                <Button variant="ghost" className="w-full justify-start text-muted-foreground" disabled>Checklist (Coming Soon)</Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* The Matchmaker Section */}
-                <div className="mb-12">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-serif font-bold">The Matchmaker</h2>
-                        <Badge variant="secondary" className="text-xs">Florida Data</Badge>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {matches.length > 0 ? matches.map((match) => (
-                            <Card key={match.vendor.id} className="relative overflow-hidden group">
-                                <div className="flex h-full flex-col sm:flex-row">
-                                    <div className="w-full sm:w-1/3 min-h-[160px]">
-                                        <img src={match.vendor.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={match.vendor.name} />
-                                    </div>
-                                    <div className="flex-1 p-4 flex flex-col justify-between">
-                                        <div>
-                                            <div className="flex justify-between items-start">
-                                                <h3 className="font-bold text-lg">{match.vendor.name}</h3>
-                                                <Badge className={`${match.totalScore > 0.8 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}`}>
-                                                    {(match.totalScore * 100).toFixed(0)}% Match
-                                                </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground mb-2">{match.vendor.hub} • {match.vendor.category}</p>
-                                            <p className="text-xs text-slate-600 line-clamp-2 mb-3">{match.vendor.description}</p>
-                                        </div>
-
-                                        {/* Score Breakdown */}
-                                        <div className="grid grid-cols-3 gap-2 text-[10px] bg-slate-50 p-2 rounded border">
-                                            <div className="text-center">
-                                                <span className="block font-bold text-rose-500">{(match.breakdown.style * 100).toFixed(0)}%</span>
-                                                <span className="text-muted-foreground">Style</span>
-                                            </div>
-                                            <div className="text-center border-l">
-                                                <span className="block font-bold text-green-600">{(match.breakdown.budget * 100).toFixed(0)}%</span>
-                                                <span className="text-muted-foreground">Budget</span>
-                                            </div>
-                                            <div className="text-center border-l">
-                                                <span className="block font-bold text-blue-500">{(match.breakdown.availability * 100).toFixed(0)}%</span>
-                                                <span className="text-muted-foreground">Avail</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        )) : (
-                            <div className="col-span-full py-12 text-center text-muted-foreground bg-slate-50 rounded-lg">
-                                <p>Complete your Style Profile and Budget to get matched!</p>
-                                <Link to="/style-matcher">
-                                    <Button className="mt-4">Start Matching</Button>
-                                </Link>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

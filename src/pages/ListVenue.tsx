@@ -151,7 +151,7 @@ const ListVenue = () => {
                 <div className="container mx-auto px-4">
                     <div className="text-center mb-16">
                         <h2 className="font-serif text-4xl mb-4">Get Listed in Minutes</h2>
-                        <p className="text-primary-foreground/80">A simple 4-step process to double your inquiries.</p>
+                        <p className="text-primary-foreground">A simple 4-step process to double your inquiries.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
@@ -169,7 +169,7 @@ const ListVenue = () => {
                                     {i + 1}
                                 </div>
                                 <h3 className="font-semibold text-xl mb-2">{step.title}</h3>
-                                <p className="text-primary-foreground/70">{step.desc}</p>
+                                <p className="text-primary-foreground">{step.desc}</p>
                             </div>
                         ))}
                     </div>

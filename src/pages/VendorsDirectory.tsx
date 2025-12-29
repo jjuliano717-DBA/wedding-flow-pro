@@ -174,7 +174,7 @@ const VendorsDirectory = () => {
                   onClick={() => setSelectedCategory(isActive ? "All Categories" : category)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${isActive
                     ? "bg-primary text-primary-foreground"
-                    : "bg-card border border-border hover:border-primary/50"
+                    : "bg-card border border-border text-rose-600 hover:border-primary/50 hover:bg-rose-50"
                     }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -194,7 +194,7 @@ const VendorsDirectory = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
+              className="gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
             >
               <Filter className="w-4 h-4" />
               More Filters
@@ -207,7 +207,7 @@ const VendorsDirectory = () => {
                 checked={verifiedOnly}
                 onCheckedChange={setVerifiedOnly}
               />
-              <Label htmlFor="verified-only" className="text-sm flex items-center gap-1.5 cursor-pointer">
+              <Label htmlFor="verified-only" className="text-sm flex items-center gap-1.5 cursor-pointer text-slate-900">
                 <ShieldCheck className="w-4 h-4 text-amber-500" />
                 Verified only
               </Label>
@@ -218,7 +218,7 @@ const VendorsDirectory = () => {
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
                   {locationsList.map((location) => (
                     <option key={location} value={location}>{location}</option>
@@ -228,7 +228,7 @@ const VendorsDirectory = () => {
                 <select
                   value={selectedPrice}
                   onChange={(e) => setSelectedPrice(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
                   {priceRanges.map((price) => (
                     <option key={price} value={price}>{price}</option>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Star, MapPin, Users, Filter, X, Heart } from "lucide-react";
@@ -12,6 +12,7 @@ import wedding3 from "@/assets/wedding-3.jpg";
 import wedding4 from "@/assets/wedding-4.jpg";
 
 import { supabase } from "@/lib/supabase"; // Ensure import
+import { useVenueSync } from "@/hooks/useVenueSync"; // Realtime sync hook
 
 // Default fallback image if none provided
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
@@ -35,7 +36,7 @@ const MOCK_VENUES = [
   { id: 'v10', name: "Tampa Museum of Art", category: "Museum", location: "Tampa, FL", guest_capacity: 400, price_range: "$$$", google_rating: 4.2, google_reviews: 400, image_url: DEFAULT_IMAGE },
   { id: 'v11', name: "Yacht StarShip Cruises & Events", category: "Event Venue", location: "Tampa, FL", guest_capacity: 600, price_range: "$$", google_rating: 4.4, google_reviews: 600, image_url: DEFAULT_IMAGE },
   { id: 'v12', name: "Tampa Garden Club", category: "Wedding Venue", location: "Tampa, FL", guest_capacity: 325, price_range: "$$", google_rating: 4.5, google_reviews: 100, image_url: DEFAULT_IMAGE },
-  { id: 'v13', name: "Flora Groves Farm", category: "Rustic Barn", location: "Thonotosassa, FL", guest_capacity: 165, price_range: "$$", google_rating: 5.0, google_reviews: 0, image_url: DEFAULT_IMAGE }
+  { id: 'v13', name: "Flora Groves Farm", category: "Rustic Barn", location: "Thonotosassa, FL", guest_capacity: 165, price_range: "$$", google_rating: 5.0, google_reviews: 127, image_url: "https://lh3.googleusercontent.com/p/AF1QipPV8OeFWkdGyLxEdFnXkWSCMnibz7Hun9l7xyb-=w600-h988-p-k-no" }
 ];
 
 const VenuesDirectory = () => {
@@ -49,40 +50,38 @@ const VenuesDirectory = () => {
   const [selectedPrice, setSelectedPrice] = useState("All Prices");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch Venues from Supabase
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('vendors')
-          .select('*')
-          // Filter for venues using OR logic to be more inclusive
-          .or('type.ilike.%venue%,category.ilike.%venue%');
+  // Fetch Venues from Supabase (memoized callback for realtime sync)
+  const fetchVenues = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('category', 'venue'); // Filter for venues using unified category field
 
-        if (error) console.error("Supabase Error:", error);
+      if (error) console.error("Supabase Error:", error);
 
-        // Merge real data with mock data (prefer real data if ID matches, though IDs differ here)
-        // We will prepend real data to MOCK_VENUES, ensuring Flora Groves (if saved really) appears.
-        // Actually, since user asked to 'post back' specific venues including Flora Groves, 
-        // we can just use MOCK_VENUES as base and unique-ify by name if needed.
-        // For simplicity: MOCK_VENUES + Database Venues that aren't duplicates.
+      const realVenues = data || [];
+      // Dedup by name
+      const mockNames = new Set(MOCK_VENUES.map(v => v.name));
+      const newRealVenues = realVenues.filter(v => !mockNames.has(v.name));
 
-        const realVenues = data || [];
-        // Dedup by name
-        const mockNames = new Set(MOCK_VENUES.map(v => v.name));
-        const newRealVenues = realVenues.filter(v => !mockNames.has(v.name));
+      setVenues([...newRealVenues, ...MOCK_VENUES]);
 
-        setVenues([...newRealVenues, ...MOCK_VENUES]);
-
-      } catch (error) {
-        console.error("Error fetching venues:", error);
-        setVenues(MOCK_VENUES); // Fallback completely on error
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVenues();
+    } catch (error) {
+      console.error("Error fetching venues:", error);
+      setVenues(MOCK_VENUES); // Fallback completely on error
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchVenues();
+  }, [fetchVenues]);
+
+  // Realtime subscription - refetch when vendors table updates
+  useVenueSync(fetchVenues);
 
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
@@ -178,7 +177,7 @@ const VenuesDirectory = () => {
                   onClick={() => setSelectedType(isActive ? "All Types" : type)}
                   className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${isActive
                     ? "bg-primary text-primary-foreground"
-                    : "bg-card border border-border hover:border-primary/50"
+                    : "bg-card border border-border text-rose-600 hover:border-primary/50 hover:bg-rose-50"
                     }`}
                 >
                   {type}
@@ -197,7 +196,7 @@ const VenuesDirectory = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
+              className="gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
             >
               <Filter className="w-4 h-4" />
               More Filters
@@ -208,7 +207,7 @@ const VenuesDirectory = () => {
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
                   {locationsList.map((location) => (
                     <option key={location} value={location}>{location}</option>
@@ -218,7 +217,7 @@ const VenuesDirectory = () => {
                 <select
                   value={selectedCapacity}
                   onChange={(e) => setSelectedCapacity(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
                   {capacities.map((capacity) => (
                     <option key={capacity} value={capacity}>{capacity}</option>
@@ -228,7 +227,7 @@ const VenuesDirectory = () => {
                 <select
                   value={selectedPrice}
                   onChange={(e) => setSelectedPrice(e.target.value)}
-                  className="h-9 px-3 rounded-md border border-border bg-card text-sm"
+                  className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
                   {priceRanges.map((price) => (
                     <option key={price} value={price}>{price}</option>
