@@ -9,8 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+// Footer removed as it's provided by LayoutShell
 import { Separator } from "@/components/ui/separator";
 
 const VenueDetail = () => {
@@ -155,7 +154,7 @@ const VenueDetail = () => {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Header />
+            {/* Header removed as it's provided by LayoutShell */}
 
             <main className="pt-24 pb-20">
                 {/* Breadcrumb */}
@@ -428,7 +427,7 @@ const VenueDetail = () => {
             </main>
 
 
-            <Footer />
+
 
             {/* Photo Gallery Dialog */}
             <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
