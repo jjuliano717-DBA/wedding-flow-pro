@@ -212,7 +212,7 @@ export default function BusinessDashboard() {
                         <CardContent>
                             <div className="flex items-center gap-1 text-xs font-medium text-green-400">
                                 <ArrowUpRight className="w-3 h-3" />
-                                <span>{stat.trend} from last month</span>
+                                <span className={stat.trend.startsWith('+') ? 'text-green-400' : 'text-red-400'}>{stat.trend} from last month</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -269,7 +269,7 @@ export default function BusinessDashboard() {
                                     </CardContent>
                                 </Card>
                             ) : (
-                                <Card className="border-slate-800 bg-slate-900/50 shadow-none text-white">
+                                <Card className="border-slate-200 bg-white shadow-sm">
                                     <CardHeader className="flex flex-row items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-rose-500/10 rounded-lg">

@@ -36,7 +36,16 @@ export const PlannerSidebar = () => {
         >
             {/* Sidebar Header */}
             <div className="h-20 flex items-center px-6 border-b border-slate-800">
-                <Logo className={isCollapsed ? "h-8" : "h-8 brightness-0 invert"} simplified={isCollapsed} />
+                <div className="flex items-center gap-2 h-8 brightness-0 invert">
+                    <svg viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-auto">
+                        <circle cx="35" cy="30" r="25" stroke="#0F172A" strokeWidth="6" className="transition-colors duration-300"></circle>
+                        <circle cx="65" cy="30" r="25" stroke="#DCA1A1" strokeWidth="6" className="transition-colors duration-300"></circle>
+                        <path d="M51.5 13.5C54.8 17.5 56.8 23.5 56.8 30C56.8 36.5 54.8 42.5 51.5 46.5" stroke="#0F172A" strokeWidth="6" strokeLinecap="round"></path>
+                    </svg>
+                    {!isCollapsed && <span className="font-serif text-xl font-bold tracking-tight text-brand-navy flex items-baseline">
+                        2Plan<span className="text-dusty-rose">A</span>Wedding
+                    </span>}
+                </div>
             </div>
 
             {/* Navigation */}

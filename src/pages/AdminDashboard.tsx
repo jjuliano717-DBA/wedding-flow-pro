@@ -21,7 +21,8 @@ import {
     Calendar,
     ShieldCheck,
     Check,
-    DollarSign
+    DollarSign,
+    Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,9 @@ interface AdminUser {
     email: string;
     role: UserRole;
     status: string; // derived
+    business_name?: string;
+    couple_names?: string;
+    location?: string;
 }
 
 interface Venue {
@@ -309,7 +313,7 @@ const AdminDashboard = () => {
             if (type === 'venue') setFormData({ name: '', type: 'Ballroom', description: '', location: '', capacity: '50-300', capacity_num: 100, price: '$$$', google_rating: 0, google_reviews: 0, heart_rating: 0, exclusive: false, featured: false, indoor: true, outdoor: true, image_url: '', website: '', google_business_url: '', contact_email: '', phone: '', amenities: [], images: [] });
             if (type === 'wedding') setFormData({ couple_names: '', location: '', style: 'Classic', season: 'Spring', featuring: '', vendors: [], exclusive: false, image_url: '' });
             if (type === 'tip') setFormData({ title: '', category: 'Planning', content: '', image_url: '', author: '', read_time: '', tags: [], publish: true, exclusive: false });
-            if (type === 'user') setFormData({ full_name: '', email: '', role: 'couple', status: 'active' });
+            if (type === 'user') setFormData({ full_name: '', email: '', role: 'couple', status: 'active', business_name: '', couple_names: '', location: '' });
         }
         setIsDialogOpen(true);
     };
@@ -655,6 +659,7 @@ const AdminDashboard = () => {
                             <div className="space-y-2"><Label>Full Name</Label><Input value={formData.full_name || ''} onChange={e => setFormData({ ...formData, full_name: e.target.value })} /></div>
                             <div className="space-y-2"><Label>Email</Label><Input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} disabled={!!editingId} /></div>
                         </div>
+                        <div className="space-y-2"><Label>Location</Label><Input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="New York, NY" /></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2"><Label>Role</Label>
                                 <Select value={formData.role || 'couple'} onValueChange={v => setFormData({ ...formData, role: v })}>
@@ -681,6 +686,7 @@ const AdminDashboard = () => {
                     {formData.role === 'couple' && (
                         <div className="space-y-4">
                             <h3 className="text-sm font-semibold text-slate-700 border-b pb-2">Wedding Details</h3>
+                            <div className="space-y-2"><Label>Couple Names</Label><Input value={formData.couple_names || ''} onChange={e => setFormData({ ...formData, couple_names: e.target.value })} placeholder="Jessica & Michael" /></div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2"><Label>Partner 1 Name</Label><Input value={formData.partner1_name || ''} onChange={e => setFormData({ ...formData, partner1_name: e.target.value })} /></div>
                                 <div className="space-y-2"><Label>Partner 2 Name</Label><Input value={formData.partner2_name || ''} onChange={e => setFormData({ ...formData, partner2_name: e.target.value })} /></div>
@@ -706,6 +712,7 @@ const AdminDashboard = () => {
                     {(formData.role === 'vendor' || formData.role === 'venue' || formData.role === 'planner') && (
                         <div className="space-y-4">
                             <h3 className="text-sm font-semibold text-slate-700 border-b pb-2">Business Link</h3>
+                            <div className="space-y-2"><Label>Business Name</Label><Input value={formData.business_name || ''} onChange={e => setFormData({ ...formData, business_name: e.target.value })} placeholder="My Awesome Business" /></div>
                             <div className="space-y-2"><Label>Vendor Profile ID (UUID)</Label><Input value={formData.vendor_profile_id || ''} onChange={e => setFormData({ ...formData, vendor_profile_id: e.target.value })} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></div>
                         </div>
                     )}
@@ -1014,11 +1021,11 @@ const AdminDashboard = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-blue-600 hover:text-blue-700"
+                                                    className="text-amber-600 hover:text-amber-700"
                                                     onClick={() => handleSetPassword(u.id, u.email)}
                                                     title="Set new password"
                                                 >
-                                                    <Mail className="w-4 h-4" />
+                                                    <Key className="w-4 h-4" />
                                                 </Button>
                                                 <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(u.id, 'user')}><Trash2 className="w-4 h-4" /></Button>
                                             </TableCell>

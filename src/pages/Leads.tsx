@@ -437,11 +437,11 @@ export default function LeadResponseSystem() {
                         <div className="space-y-6">
                             <div className="space-y-2">
                                 <Label>Base Service/Item</Label>
-                                <Input value={selectedLead?.asset_category} disabled className="bg-slate-800 border-slate-700" />
+                                <Input value={selectedLead?.asset_category} disabled className="bg-white border-slate-200" />
                             </div>
                             <div className="space-y-2">
                                 <Label>Pricing Model</Label>
-                                <Input value={selectedLead?.cost_model?.replace('_', ' ').toUpperCase()} disabled className="bg-slate-800 border-slate-700" />
+                                <Input value={selectedLead?.cost_model?.replace('_', ' ').toUpperCase()} disabled className="bg-white border-slate-200" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -450,7 +450,7 @@ export default function LeadResponseSystem() {
                                         type="number"
                                         value={quantity}
                                         onChange={e => setQuantity(Number(e.target.value))}
-                                        className="bg-slate-800 border-slate-700"
+                                        className="bg-white border-slate-200"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -459,13 +459,13 @@ export default function LeadResponseSystem() {
                                         type="number"
                                         value={unitPrice}
                                         onChange={e => setUnitPrice(Number(e.target.value))}
-                                        className="bg-slate-800 border-slate-700"
+                                        className="bg-white border-slate-200"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
                             <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-800 pb-2">Estimated Total</h4>
                             <div className="space-y-2">
                                 <div className="flex justify-between text-sm">

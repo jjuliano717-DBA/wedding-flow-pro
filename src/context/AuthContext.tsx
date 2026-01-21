@@ -33,6 +33,8 @@ export interface User {
 
     // Role & Business Fields
     role: UserRole;
+    businessName?: string;
+    coupleNames?: string;
     businessProfile?: {
         serviceCategory: string;
         priceRange: '$' | '$$' | '$$$' | '$$$$';
@@ -198,7 +200,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (updatedData.guestCount) updates.guest_count = updatedData.guestCount;
             if (updatedData.planningPace) updates.planning_pace = updatedData.planningPace;
 
-            const { error } = await supabase.from('users').upsert(updates);
+            const { error } = await supabase.from('profiles').upsert(updates);
 
             if (error) throw error;
             toast.success("Profile updated");

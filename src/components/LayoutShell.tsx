@@ -46,30 +46,30 @@ export const LayoutShell = ({ children }: LayoutShellProps) => {
     // 2. Pro View (Sidebar Layout)
     if (role === 'vendor' || role === 'venue' || role === 'admin') {
         return (
-            <div className="min-h-screen bg-[#0F172A] flex">
+            <div className="min-h-screen bg-gray-50 flex">
                 <ProSidebar />
                 <div className="flex-1 flex flex-col md:pl-64 transition-all duration-300">
                     {/* Minimal Pro Header */}
-                    <header className="h-16 md:h-20 bg-[#0F172A] border-b border-slate-800 sticky top-0 z-40 px-6 flex items-center justify-end text-white">
+                    <header className="h-16 md:h-20 bg-white border-b border-slate-200 sticky top-0 z-40 px-6 flex items-center justify-end text-slate-900">
                         <div className="flex items-center gap-4">
                             <span className="text-sm font-medium text-brand-navy hidden sm:block">
                                 {role === 'admin' ? 'Admin Panel' : 'Business Dashboard'}
                             </span>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="w-8 h-8 rounded-full bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-colors cursor-pointer" />
+                                    <button className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 border border-slate-300 transition-colors cursor-pointer" />
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48 bg-slate-900 border-slate-700 text-white">
+                                <DropdownMenuContent align="end" className="w-48 bg-white border-slate-200 text-slate-900">
                                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                                    <DropdownMenuSeparator className="bg-slate-700" />
-                                    <DropdownMenuItem asChild className="hover:bg-slate-800 focus:bg-slate-800">
+                                    <DropdownMenuSeparator className="bg-slate-100" />
+                                    <DropdownMenuItem asChild className="hover:bg-slate-100 focus:bg-slate-100">
                                         <Link to="/profile" className="cursor-pointer flex items-center">
                                             <User className="w-4 h-4 mr-2" />
                                             Edit Profile
                                         </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuSeparator className="bg-slate-700" />
-                                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-400 hover:bg-slate-800 focus:bg-slate-800">
+                                    <DropdownMenuSeparator className="bg-slate-100" />
+                                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-600 hover:bg-slate-100 focus:bg-slate-100">
                                         <LogOut className="w-4 h-4 mr-2" />
                                         Logout
                                     </DropdownMenuItem>
@@ -77,7 +77,7 @@ export const LayoutShell = ({ children }: LayoutShellProps) => {
                             </DropdownMenu>
                         </div>
                     </header>
-                    <main className="flex-1 p-6 md:p-10 text-white">
+                    <main className="flex-1 p-6 md:p-10 text-slate-900">
                         {children}
                     </main>
                 </div>
@@ -88,11 +88,11 @@ export const LayoutShell = ({ children }: LayoutShellProps) => {
     // 3. Planner View (Agency Layout)
     if (role === 'planner') {
         return (
-            <div className="min-h-screen bg-[#0F172A] flex">
+            <div className="min-h-screen bg-gray-50 flex">
                 <PlannerSidebar />
                 <div className="flex-1 flex flex-col md:pl-64 transition-all duration-300">
                     <PlannerHeader />
-                    <main className="flex-1 p-6 md:p-10 text-white">
+                    <main className="flex-1 p-6 md:p-10 text-slate-900">
                         {children}
                     </main>
                 </div>
