@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, MapPin, Heart, ArrowLeft, Globe, Mail, Check, Share2, Instagram, Facebook, ShieldCheck, ExternalLink, TrendingUp, Loader2 } from "lucide-react";
+import { Star, MapPin, Heart, ArrowLeft, Globe, Mail, Check, Share2, Instagram, Facebook, ShieldCheck, ExternalLink, TrendingUp, Loader2, BookOpen, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,23 @@ import { TrustScore, calculateTrustScore } from "@/lib/googlePlaces";
 import { Progress } from "@/components/ui/progress";
 import { sendInquiryEmails } from "@/lib/emailService";
 import { useAuth } from "@/context/AuthContext";
+import { format } from "date-fns";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface Vendor {
     id: string;
@@ -29,6 +46,7 @@ interface Vendor {
     exclusive: boolean;
     image_url: string;
     google_business_url?: string;
+    owner_id?: string;
 }
 
 // Calculate trust score from vendor data
@@ -57,6 +75,13 @@ const VendorDetail = () => {
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    // Referral Dialog State
+    const [isReferralOpen, setIsReferralOpen] = useState(false);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [selectedProject, setSelectedProject] = useState("");
+    const [loadingProjects, setLoadingProjects] = useState(false);
+
     const [formData, setFormData] = useState({
         fname: '',
         lname: '',
@@ -65,7 +90,86 @@ const VendorDetail = () => {
         message: ''
     });
 
-    // Pre-fill email if user is logged in
+    const [isInBlackBook, setIsInBlackBook] = useState(false);
+    const [plannerProfileId, setPlannerProfileId] = useState<string | null>(null);
+    const [partnership, setPartnership] = useState<any | null>(null);
+
+    // Check if user is a planner and get their profile ID
+    useEffect(() => {
+        const checkPlannerStatus = async () => {
+            if (user?.role === 'planner' || user?.role === 'admin') { // Allow admins to test
+                const { data } = await supabase
+                    .from('vendors')
+                    .select('id')
+                    .eq('owner_id', user.id)
+                    .single();
+                if (data) setPlannerProfileId(data.id);
+            }
+        };
+        checkPlannerStatus();
+    }, [user]);
+
+    // Check if vendor is in black book AND check partnership status
+    useEffect(() => {
+        const checkStatus = async () => {
+            if (!plannerProfileId || !id) return;
+
+            // Check Black Book
+            const { data: bbData } = await supabase
+                .from('black_book')
+                .select('id')
+                .eq('planner_id', plannerProfileId)
+                .eq('vendor_id', id)
+                .single();
+            setIsInBlackBook(!!bbData);
+
+            // Check Partnership
+            const { data: pData } = await supabase
+                .from('vendor_partnerships')
+                .select('*')
+                .or(`and(requester_id.eq.${plannerProfileId},receiver_id.eq.${id}),and(requester_id.eq.${id},receiver_id.eq.${plannerProfileId})`)
+                .eq('status', 'accepted')
+                .maybeSingle(); // Use maybeSingle as there might not be one
+
+            setPartnership(pData);
+        };
+        checkStatus();
+    }, [plannerProfileId, id]);
+
+    const toggleBlackBook = async () => {
+        if (!plannerProfileId || !id) return;
+
+        if (isInBlackBook) {
+            // Remove
+            const { error } = await supabase
+                .from('black_book')
+                .delete()
+                .eq('planner_id', plannerProfileId)
+                .eq('vendor_id', id);
+
+            if (error) {
+                toast.error("Failed to remove from Black Book");
+            } else {
+                setIsInBlackBook(false);
+                toast.success("Removed from Black Book");
+            }
+        } else {
+            // Add
+            const { error } = await supabase
+                .from('black_book')
+                .insert({
+                    planner_id: plannerProfileId,
+                    vendor_id: id
+                });
+
+            if (error) {
+                toast.error("Failed to add to Black Book");
+            } else {
+                setIsInBlackBook(true);
+                toast.success("Added to Black Book");
+            }
+        }
+    };
     useEffect(() => {
         if (user?.email) {
             setFormData(prev => ({ ...prev, email: user.email || '' }));
@@ -119,6 +223,23 @@ const VendorDetail = () => {
         }
     };
 
+    // Fetch projects when opening referral dialog
+    useEffect(() => {
+        if (isReferralOpen && user) {
+            const fetchProjects = async () => {
+                setLoadingProjects(true);
+                const { data } = await supabase
+                    .from('projects')
+                    .select('id, client_name, wedding_date')
+                    .eq('user_id', user.id)
+                    .order('client_name');
+                setProjects(data || []);
+                setLoadingProjects(false);
+            };
+            fetchProjects();
+        }
+    }, [isReferralOpen, user]);
+
     if (loading) {
         return (
             <div className="flex-1 flex items-center justify-center">
@@ -126,6 +247,39 @@ const VendorDetail = () => {
             </div>
         );
     }
+
+    const handleSendReferral = async () => {
+        if (!selectedProject || !plannerProfileId || !vendor) return;
+
+        const project = projects.find(p => p.id === selectedProject);
+        if (!project) return;
+
+        try {
+            setSubmitting(true);
+            const { error } = await supabase
+                .from('referrals')
+                .insert({
+                    from_vendor_id: plannerProfileId,
+                    to_vendor_id: vendor.id,
+                    project_id: project.id,
+                    client_name: project.client_name,
+                    event_date: project.wedding_date,
+                    status: 'sent',
+                    client_email: '' // Optional or could be fetched from project if added later
+                });
+
+            if (error) throw error;
+
+            toast.success(`Referral sent to ${vendor.name} for ${project.client_name}!`);
+            setIsReferralOpen(false);
+            setSelectedProject("");
+        } catch (error) {
+            console.error("Error sending referral:", error);
+            toast.error("Failed to send referral");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     if (!vendor) {
         return (
@@ -156,6 +310,20 @@ const VendorDetail = () => {
                             )}
                         </div>
                         <h1 className="font-serif text-4xl md:text-5xl text-foreground mb-4">{vendor.name}</h1>
+
+                        {/* Partnership Badge */}
+                        {partnership && (
+                            <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-medium">
+                                <Check className="w-4 h-4" />
+                                <span>Partner Connected</span>
+                                {partnership.default_commission_rate_pct && (
+                                    <span className="ml-1 pl-2 border-l border-emerald-200">
+                                        {partnership.default_commission_rate_pct}% Commission
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex flex-wrap items-center gap-4 text-sm md:text-base">
                             <div className="flex items-center gap-1.5">
                                 <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -174,6 +342,78 @@ const VendorDetail = () => {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {/* Planner Action: Refer to Client */}
+                        {plannerProfileId && user?.id !== vendor.owner_id && (
+                            <Dialog open={isReferralOpen} onOpenChange={setIsReferralOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="gap-2 border-brand-navy text-brand-navy hover:bg-slate-100">
+                                        <Send className="w-4 h-4" /> Refer to Client
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Refer {vendor.name} to a Client</DialogTitle>
+                                        <DialogDescription>
+                                            Select one of your active client projects to send this vendor to.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label>Select Client Project</Label>
+                                            <Select value={selectedProject} onValueChange={setSelectedProject}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Choose a client..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {loadingProjects ? (
+                                                        <div className="p-2 text-center text-sm text-muted-foreground">Loading projects...</div>
+                                                    ) : projects.length === 0 ? (
+                                                        <div className="p-2 text-center text-sm text-muted-foreground">No active projects found.</div>
+                                                    ) : (
+                                                        projects.map(p => (
+                                                            <SelectItem key={p.id} value={p.id}>
+                                                                {p.client_name}
+                                                                {p.wedding_date && <span className="text-muted-foreground ml-2">({format(new Date(p.wedding_date), 'MMM yyyy')})</span>}
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsReferralOpen(false)}>Cancel</Button>
+                                        <Button
+                                            onClick={handleSendReferral}
+                                            disabled={!selectedProject || submitting}
+                                            className="bg-brand-navy text-white"
+                                        >
+                                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Referral"}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
+
+                        {/* Planner Action: Add to Black Book */}
+                        {plannerProfileId && user?.id !== vendor.owner_id && (
+                            <Button
+                                variant={isInBlackBook ? "secondary" : "default"}
+                                className={`gap-2 ${isInBlackBook ? "bg-slate-100 text-slate-900 border border-slate-200" : "bg-brand-navy hover:bg-slate-800"}`}
+                                onClick={toggleBlackBook}
+                            >
+                                <BookOpen className="w-4 h-4" />
+                                {isInBlackBook ? "Saved to Black Book" : "Add to Black Book"}
+                            </Button>
+                        )}
+
+                        {user?.id === vendor.owner_id && (
+                            <Button variant="outline" className="gap-2 border-slate-300 text-slate-700 hover:text-slate-900" asChild>
+                                <Link to="/business/onboarding">
+                                    <Globe className="w-4 h-4" /> Edit Profile
+                                </Link>
+                            </Button>
+                        )}
                         <Button variant="outline" size="icon" className="rounded-full" onClick={() => setIsLiked(!isLiked)}>
                             <Heart className={`w-5 h-5 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground'}`} />
                         </Button>

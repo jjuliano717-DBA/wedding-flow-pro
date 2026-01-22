@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Star, MapPin, Users, Filter, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,12 +43,13 @@ const VenuesDirectory = () => {
   const [venues, setVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState("All Types");
-  const [selectedLocation, setSelectedLocation] = useState("All Locations");
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [selectedType, setSelectedType] = useState(searchParams.get("type") || "All Types");
+  const [selectedLocation, setSelectedLocation] = useState(searchParams.get("location") || "All Locations");
   const [selectedCapacity, setSelectedCapacity] = useState("Any Capacity");
   const [selectedPrice, setSelectedPrice] = useState("All Prices");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(!!searchParams.get("search") || !!searchParams.get("location") || !!searchParams.get("type"));
 
   // Fetch Venues from Supabase (memoized callback for realtime sync)
   const fetchVenues = useCallback(async () => {
@@ -83,14 +84,36 @@ const VenuesDirectory = () => {
   // Realtime subscription - refetch when vendors table updates
   useVenueSync(fetchVenues);
 
+  // Dynamic Data Derivation
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    venues.forEach(v => {
+      // Logic: Prioritize explicit category, fallback to type or 'Venue'
+      const type = v.category || v.type || 'Venue';
+      types.add(type);
+    });
+    return ["All Types", ...Array.from(types).sort()];
+  }, [venues]);
+
+  const availableLocations = useMemo(() => {
+    const locs = new Set<string>();
+    venues.forEach(v => {
+      if (v.location) locs.add(v.location);
+    });
+    return ["All Locations", ...Array.from(locs).sort()];
+  }, [venues]);
+
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
+      const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
-        (venue.name && venue.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (venue.location && venue.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (venue.category && venue.category.toLowerCase().includes(searchQuery.toLowerCase()));
+        (venue.name && venue.name.toLowerCase().includes(searchLower)) ||
+        (venue.location && venue.location.toLowerCase().includes(searchLower)) ||
+        (venue.category && venue.category.toLowerCase().includes(searchLower));
 
-      const matchesType = selectedType === "All Types" || venue.category === selectedType; // Note: category might be specifically "Ballroom", etc.
+      const venueType = venue.category || venue.type || 'Venue';
+      const matchesType = selectedType === "All Types" || venueType === selectedType;
+
       const matchesLocation = selectedLocation === "All Locations" || (venue.location && venue.location.includes(selectedLocation));
       const matchesPrice = selectedPrice === "All Prices" || venue.price_range === selectedPrice;
 
@@ -169,7 +192,7 @@ const VenuesDirectory = () => {
       <section className="py-8 bg-background border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {venueTypes.slice(1).map((type) => {
+            {availableTypes.slice(1).map((type) => {
               const isActive = selectedType === type;
               return (
                 <button
@@ -209,7 +232,7 @@ const VenuesDirectory = () => {
                   onChange={(e) => setSelectedLocation(e.target.value)}
                   className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
-                  {locationsList.map((location) => (
+                  {availableLocations.map((location) => (
                     <option key={location} value={location}>{location}</option>
                   ))}
                 </select>

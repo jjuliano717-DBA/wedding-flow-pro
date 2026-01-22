@@ -22,6 +22,11 @@ const categoryIcons: Record<string, React.ElementType> = {
   "Planner": Sparkles,
   "Hair & Makeup": Users,
   "Videographer": Video,
+  "Lighting": Sparkles,
+  "Decor": Flower2,
+  "Rentals": Sparkles,
+  "Transportation": MapPin,
+  "Officiant": Users,
 };
 
 import { supabase } from "@/lib/supabase";
@@ -29,7 +34,7 @@ import { supabase } from "@/lib/supabase";
 // Default fallback image if none provided
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
 
-const categories = ["All Categories", "Photographer", "Florist", "DJ/Band", "Caterer", "Cake Designer", "Planner", "Hair & Makeup", "Videographer"];
+const categories = ["All Categories", "Photographer", "Florist", "DJ/Band", "Caterer", "Cake Designer", "Planner", "Hair & Makeup", "Videographer", "Lighting", "Decor", "Rentals", "Transportation", "Officiant"];
 const locationsList = ["All Locations", "California", "New York", "Florida", "Illinois", "Tennessee", "Texas", "Washington", "Colorado", "Georgia", "Oregon", "Massachusetts"];
 const priceRanges = ["All Prices", "$", "$$", "$$$", "$$$$"];
 
@@ -72,8 +77,7 @@ const VendorsDirectory = () => {
       try {
         const { data, error } = await supabase
           .from('vendors')
-          .select('*')
-          .eq('exclusive', true); // Only fetch exclusive vendors as requested
+          .select('*');
 
         if (error) throw error;
         setVendors(data || []);
@@ -86,17 +90,41 @@ const VendorsDirectory = () => {
     fetchVendors();
   }, []);
 
+  // Dynamic Data Derivation
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    vendors.forEach(v => {
+      if (v.category) cats.add(v.category);
+      if (v.type) cats.add(v.type);
+    });
+    return ["All Categories", ...Array.from(cats).sort()];
+  }, [vendors]);
+
+  const availableLocations = useMemo(() => {
+    const locs = new Set<string>();
+    vendors.forEach(v => {
+      if (v.location) locs.add(v.location);
+    });
+    return ["All Locations", ...Array.from(locs).sort()];
+  }, [vendors]);
+
+
   const filteredVendors = useMemo(() => {
     return vendors.filter((vendor) => {
+      const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
-        vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (vendor.location && vendor.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (vendor.category && vendor.category.toLowerCase().includes(searchQuery.toLowerCase()));
+        vendor.name.toLowerCase().includes(searchLower) ||
+        (vendor.location && vendor.location.toLowerCase().includes(searchLower)) ||
+        (vendor.category && vendor.category.toLowerCase().includes(searchLower)) ||
+        (vendor.type && vendor.type.toLowerCase().includes(searchLower));
 
-      const matchesCategory = selectedCategory === "All Categories" || vendor.category === selectedCategory || vendor.type === selectedCategory;
+      const matchesCategory = selectedCategory === "All Categories" ||
+        vendor.category === selectedCategory ||
+        vendor.type === selectedCategory;
+
       const matchesLocation = selectedLocation === "All Locations" || (vendor.location && vendor.location.includes(selectedLocation));
-      // Price range not currently in DB, ignoring for now or mapping if added later
-      const matchesPrice = selectedPrice === "All Prices";
+
+      const matchesPrice = selectedPrice === "All Prices" || vendor.price_range === selectedPrice;
 
       // Verified filter: check if vendor has google_rating > 0
       const matchesVerified = !verifiedOnly || (vendor.google_rating && vendor.google_rating > 0);
@@ -165,7 +193,7 @@ const VendorsDirectory = () => {
       <section className="py-8 bg-background border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {categories.slice(1).map((category) => {
+            {availableCategories.slice(1).map((category) => {
               const Icon = categoryIcons[category] || Sparkles;
               const isActive = selectedCategory === category;
               return (
@@ -220,7 +248,7 @@ const VendorsDirectory = () => {
                   onChange={(e) => setSelectedLocation(e.target.value)}
                   className="h-9 px-3 rounded-md border border-border bg-card text-rose-600 text-sm"
                 >
-                  {locationsList.map((location) => (
+                  {availableLocations.map((location) => (
                     <option key={location} value={location}>{location}</option>
                   ))}
                 </select>

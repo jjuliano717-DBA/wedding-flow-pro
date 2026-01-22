@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +17,12 @@ import {
     Phone,
     MapPin,
     ArrowUpRight,
-    Plus
+    Plus,
+    Send
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
 import { useBusiness } from "@/context/BusinessContext";
 import {
@@ -33,6 +33,13 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -69,8 +76,14 @@ export default function LeadResponseSystem() {
     const [unitPrice, setUnitPrice] = useState(0);
     const [submitting, setSubmitting] = useState(false);
 
+    // Referral State
+    const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+    const [partnerships, setPartnerships] = useState<any[]>([]);
+    const [selectedPartnerId, setSelectedPartnerId] = useState("");
+
     const selectedLead = leads.find(l => l.id === selectedLeadId);
 
+    // Initial Quote State Effect
     useEffect(() => {
         if (selectedLead && isQuoteModalOpen) {
             setUnitPrice(selectedLead.base_cost || 0);
@@ -83,11 +96,46 @@ export default function LeadResponseSystem() {
         }
     }, [selectedLead, isQuoteModalOpen]);
 
+    // Fetch Leads Effect
     useEffect(() => {
         if (businessProfile?.id) {
             fetchLeadsFromSwipes();
         }
     }, [businessProfile?.id]);
+
+    // Fetch Partnerships Effect
+    useEffect(() => {
+        if (isReferralModalOpen && businessProfile?.id) {
+            fetchPartnerships();
+        }
+    }, [isReferralModalOpen, businessProfile?.id]);
+
+    const fetchPartnerships = async () => {
+        try {
+            // Fetch ALL vendors to allow referring to anyone
+            const { data } = await supabase
+                .from('vendors')
+                .select('id, name, type')
+                .neq('id', businessProfile?.id || '')
+                .limit(50); // Limit for now to avoid massive lists
+
+            if (data) {
+                const mapped = data.map(v => ({
+                    id: `temp-${v.id}`, // Referral table might expect partnership ID, but we want target vendor ID. 
+                    // Warning: The insertion logic expects a partnership rate. 
+                    // If we refer to non-partner, we might need a default rate.
+                    partnerId: v.id,
+                    partnerName: v.name,
+                    partnerType: v.type,
+                    rate: 10 // Default rate for non-partners or standard
+                }));
+                setPartnerships(mapped);
+            }
+        } catch (error) {
+            console.error("Error fetching vendors:", error);
+            toast.error("Failed to load vendors");
+        }
+    };
 
     const fetchLeadsFromSwipes = async () => {
         setLoading(true);
@@ -158,10 +206,127 @@ export default function LeadResponseSystem() {
         l.asset_category.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const handleSeedData = async () => {
+        if (!businessProfile?.id) return;
+        setLoading(true);
+        try {
+            const { data: assets } = await supabase
+                .from('inspiration_assets')
+                .select('id')
+                .eq('vendor_id', businessProfile.id)
+                .limit(1);
+
+            let assetId = assets?.[0]?.id;
+
+            if (!assetId) {
+                // Auto-create a placeholder asset if none exists
+                const { data: newAsset, error: createError } = await supabase
+                    .from('inspiration_assets')
+                    .insert([{
+                        vendor_id: businessProfile.id,
+                        category_tag: 'Floral',
+                        cost_model: 'per_guest',
+                        base_cost_low: 1000,
+                        base_cost_high: 2000,
+                        image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+                    }])
+                    .select('id')
+                    .single();
+
+                if (createError) {
+                    toast.error("Could not create demo asset. Please upload photos manually.");
+                    setLoading(false);
+                    return;
+                }
+                assetId = newAsset.id;
+            }
+
+            const demoUserId = businessProfile.owner_id;
+
+            // Ensure demo project exists for the vendor user
+            const { data: projects } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('user_id', demoUserId)
+                .limit(1);
+
+            let projectId = projects?.[0]?.id;
+
+            if (!projectId) {
+                const { data: newProject, error: pError } = await supabase
+                    .from('projects')
+                    .insert([{
+                        user_id: demoUserId,
+                        title: 'Demo Wedding',
+                        event_date: '2025-06-01',
+                        budget: 10000
+                    }])
+                    .select('id')
+                    .single();
+
+                if (!pError && newProject) {
+                    projectId = newProject.id;
+                } else {
+                    console.error("Failed to create demo project", pError);
+                    // Continue anyway, it might fail if project_id is strictly required
+                }
+            }
+
+            await supabase.from('user_swipes').insert([
+                {
+                    user_id: demoUserId,
+                    asset_id: assetId,
+                    project_id: projectId,
+                    swipe_direction: 'RIGHT',
+                    swiped_at: new Date().toISOString()
+                },
+                {
+                    user_id: demoUserId,
+                    asset_id: assetId,
+                    project_id: projectId,
+                    swipe_direction: 'SUPER_LIKE',
+                    swiped_at: new Date(Date.now() - 86400000).toISOString()
+                }
+            ]);
+
+            toast.success("Demo leads generated! Refreshing...");
+            fetchLeadsFromSwipes();
+
+        } catch (error) {
+            console.error("Error seeding:", error);
+            toast.error("Failed to seed data");
+            setLoading(false);
+        }
+    };
+
     const handleUpdateStatus = (status: Lead['status']) => {
         // In a real app, we'd update a 'leads' table or 'lead_status' in swipes
         toast.info(`Status updated to ${status}`);
         setLeads(prev => prev.map(l => l.id === selectedLeadId ? { ...l, status } : l));
+    };
+
+    const handleSendReferral = async () => {
+        if (!selectedPartnerId || !selectedLead) return;
+
+        try {
+            const partner = partnerships.find(p => p.partnerId === selectedPartnerId);
+            const { error } = await supabase.from('referrals').insert([{
+                source_vendor_id: businessProfile!.id,
+                target_vendor_id: selectedPartnerId,
+                client_name: selectedLead.client_name,
+                client_email: selectedLead.client_email,
+                status: 'pending',
+                commission_rate_pct: partner?.rate || 10,
+                partner_lead_status: 'New'
+            }]);
+
+            if (error) throw error;
+            toast.success("Lead referred successfully!");
+            setIsReferralModalOpen(false);
+        } catch (e) {
+            console.error("Referral error:", e);
+            toast.error("Failed to refer lead");
+        }
     };
 
     const handleSaveQuote = async () => {
@@ -244,7 +409,13 @@ export default function LeadResponseSystem() {
                     <ScrollArea className="flex-1 bg-white border border-slate-200 rounded-2xl">
                         <div className="p-2 space-y-1">
                             {filteredLeads.length === 0 ? (
-                                <div className="p-8 text-center text-slate-500">No leads found.</div>
+                                <div className="p-8 text-center text-slate-500 space-y-4">
+                                    <p>No leads found.</p>
+                                    <Button variant="outline" size="sm" onClick={handleSeedData} className="border-dashed border-slate-300 hover:border-rose-400 hover:text-rose-500">
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Generate Demo Leads
+                                    </Button>
+                                </div>
                             ) : filteredLeads.map((lead) => (
                                 <div
                                     key={lead.id}
@@ -318,6 +489,14 @@ export default function LeadResponseSystem() {
                                         Archive
                                     </Button>
                                     <Button
+                                        variant="outline"
+                                        className="border-slate-300 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                        onClick={() => setIsReferralModalOpen(true)}
+                                    >
+                                        <Send className="w-4 h-4 mr-2" />
+                                        Refer Lead
+                                    </Button>
+                                    <Button
                                         className="bg-rose-600 hover:bg-rose-700"
                                         onClick={() => setIsQuoteModalOpen(true)}
                                     >
@@ -387,7 +566,7 @@ export default function LeadResponseSystem() {
                                                         onClick={() => handleUpdateStatus(stat.id as any)}
                                                         className={`border-slate-800 text-xs justify-start px-3 py-6 h-auto ${selectedLead.status === stat.id
                                                             ? `bg-slate-800 border-l-4 border-l-rose-500 text-white`
-                                                            : "bg-slate-900/50 text-slate-400 hover:bg-slate-800"
+                                                            : "bg-slate-900/50 text-white hover:bg-slate-800"
                                                             }`}
                                                     >
                                                         <div className={`w-2 h-2 rounded-full mr-3 ${stat.color}`} />
@@ -427,7 +606,7 @@ export default function LeadResponseSystem() {
             <Dialog open={isQuoteModalOpen} onOpenChange={setIsQuoteModalOpen}>
                 <DialogContent className="bg-white border-slate-200 max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-serif">Generate Quote for {selectedLead?.client_name}</DialogTitle>
+                        <DialogTitle className="text-2xl font-serif">Generate Quote for {businessProfile?.name || selectedLead?.client_name}</DialogTitle>
                         <DialogDescription className="text-slate-400">
                             Create a detailed quote based on the inspiration swiped.
                         </DialogDescription>
@@ -437,11 +616,11 @@ export default function LeadResponseSystem() {
                         <div className="space-y-6">
                             <div className="space-y-2">
                                 <Label>Base Service/Item</Label>
-                                <Input value={selectedLead?.asset_category} disabled className="bg-white border-slate-200" />
+                                <Input value={selectedLead?.asset_category} className="bg-white border-slate-200" />
                             </div>
                             <div className="space-y-2">
                                 <Label>Pricing Model</Label>
-                                <Input value={selectedLead?.cost_model?.replace('_', ' ').toUpperCase()} disabled className="bg-white border-slate-200" />
+                                <Input value={selectedLead?.cost_model?.replace('_', ' ').toUpperCase()} className="bg-white border-slate-200" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -501,6 +680,54 @@ export default function LeadResponseSystem() {
                         >
                             {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                             Create Quote
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Refer Lead Dialog */}
+            <Dialog open={isReferralModalOpen} onOpenChange={setIsReferralModalOpen}>
+                <DialogContent className="max-w-md bg-white border-none shadow-2xl rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-serif text-center">Refer This Lead</DialogTitle>
+                        <DialogDescription className="text-center">
+                            Send <strong>{selectedLead?.client_name}</strong> to a partner.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-6 space-y-6">
+                        <div className="space-y-2">
+                            <Label className="font-bold">Select Partner</Label>
+                            <Select value={selectedPartnerId} onValueChange={setSelectedPartnerId}>
+                                <SelectTrigger className="h-12 bg-slate-50 border-slate-200">
+                                    <SelectValue placeholder="Choose a partner..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {partnerships.map(p => (
+                                        <SelectItem key={p.partnerId} value={p.partnerId}>
+                                            <div className="flex justify-between items-center w-[280px]">
+                                                <span className="font-medium">{p.partnerName}</span>
+                                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                                    {p.rate}% Comm.
+                                                </Badge>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                    {partnerships.length === 0 && (
+                                        <div className="p-4 text-center text-sm text-slate-500">
+                                            No eligible partners found.
+                                        </div>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            onClick={handleSendReferral}
+                            className="w-full h-12 bg-rose-600 hover:bg-rose-700 font-bold text-lg rounded-xl shadow-lg shadow-rose-200"
+                            disabled={!selectedPartnerId}
+                        >
+                            Send Referral
                         </Button>
                     </DialogFooter>
                 </DialogContent>

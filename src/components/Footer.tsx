@@ -35,7 +35,7 @@ export const Footer = () => {
         <div className="border-b border-primary-foreground/10">
           <div className="container mx-auto px-4 py-12 md:py-16">
             <div className="max-w-2xl mx-auto text-center">
-              <h3 className="font-serif text-2xl md:text-3xl mb-3">
+              <h3 className="font-serif text-2xl md:text-3xl mb-3 text-white">
                 Get Wedding Inspiration Delivered
               </h3>
               <p className="text-primary-foreground mb-6">

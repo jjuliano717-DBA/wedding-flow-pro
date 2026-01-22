@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
     Calendar as CalendarIcon,
     Filter,
@@ -41,6 +42,9 @@ interface AvailabilityEntry {
     blocked_date: string;
     reason: 'BOOKED' | 'UNAVAILABLE';
     notes: string | null;
+    start_time?: string | null;
+    end_time?: string | null;
+    is_all_day?: boolean;
 }
 
 export default function AvailabilityManager() {
@@ -53,6 +57,9 @@ export default function AvailabilityManager() {
     // Dialog state for new/editing entry
     const [reason, setReason] = useState<'BOOKED' | 'UNAVAILABLE'>('BOOKED');
     const [notes, setNotes] = useState("");
+    const [isAllDay, setIsAllDay] = useState(true);
+    const [startTime, setStartTime] = useState("09:00");
+    const [endTime, setEndTime] = useState("17:00");
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -88,9 +95,15 @@ export default function AvailabilityManager() {
         if (existing) {
             setReason(existing.reason);
             setNotes(existing.notes || "");
+            setIsAllDay(existing.is_all_day ?? true);
+            setStartTime(existing.start_time || "09:00");
+            setEndTime(existing.end_time || "17:00");
         } else {
             setReason('BOOKED');
             setNotes("");
+            setIsAllDay(true);
+            setStartTime("09:00");
+            setEndTime("17:00");
         }
         setIsDialogOpen(true);
     };
@@ -107,7 +120,13 @@ export default function AvailabilityManager() {
                 // Update or Delete (if we want to unblock, but let's just update for now)
                 const { error } = await supabase
                     .from('vendor_availability')
-                    .update({ reason, notes })
+                    .update({
+                        reason,
+                        notes,
+                        is_all_day: isAllDay,
+                        start_time: isAllDay ? null : startTime,
+                        end_time: isAllDay ? null : endTime
+                    })
                     .eq('id', existing.id);
                 if (error) throw error;
                 toast.success("Schedule updated");
@@ -119,7 +138,10 @@ export default function AvailabilityManager() {
                         vendor_id: businessProfile.id,
                         blocked_date: dateStr,
                         reason,
-                        notes
+                        notes,
+                        is_all_day: isAllDay,
+                        start_time: isAllDay ? null : startTime,
+                        end_time: isAllDay ? null : endTime
                     }]);
                 if (error) throw error;
                 toast.success("Date blocked");
@@ -301,6 +323,40 @@ export default function AvailabilityManager() {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="isAllDay"
+                                className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-rose-600 focus:ring-rose-500"
+                                checked={isAllDay}
+                                onChange={e => setIsAllDay(e.target.checked)}
+                            />
+                            <Label htmlFor="isAllDay" className="cursor-pointer">All Day Event</Label>
+                        </div>
+
+                        {!isAllDay && (
+                            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                <div className="space-y-2">
+                                    <Label>Start Time</Label>
+                                    <Input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={e => setStartTime(e.target.value)}
+                                        className="bg-slate-800 border-slate-700 text-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>End Time</Label>
+                                    <Input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={e => setEndTime(e.target.value)}
+                                        className="bg-slate-800 border-slate-700 text-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label>Internal Notes (Optional)</Label>

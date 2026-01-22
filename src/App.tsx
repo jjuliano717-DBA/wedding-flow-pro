@@ -45,6 +45,12 @@ import BlackBook from "./pages/BlackBook";
 import Finance from "./pages/Finance";
 import Contracts from "./pages/Contracts";
 import CoupleWizard from "./pages/onboarding/CoupleWizard";
+import ProNetwork from "./pages/ProNetwork";
+import ProReferrals from "./pages/ProReferrals";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import Contact from "./pages/Contact";
+import TermsOfService from "./pages/legal/TermsOfService";
+import CookiePolicy from "./pages/legal/CookiePolicy";
 
 
 const queryClient = new QueryClient();
@@ -75,7 +81,11 @@ const App = () => (
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/list-venue" element={<ListVenue />} />
                     <Route path="/join-vendor" element={<ListBusiness />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route path="/partner" element={<Partner />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsOfService />} />
+                    <Route path="/cookies" element={<CookiePolicy />} />
                     <Route path="/style-matcher" element={
                       <div className="container mx-auto py-20">
                         <StyleSwipe />
@@ -140,6 +150,16 @@ const App = () => (
                             <Contracts />
                           </BusinessDashboardLayout>
                         } />
+                        <Route path="network" element={
+                          <BusinessDashboardLayout>
+                            <ProNetwork />
+                          </BusinessDashboardLayout>
+                        } />
+                        <Route path="referrals" element={
+                          <BusinessDashboardLayout>
+                            <ProReferrals />
+                          </BusinessDashboardLayout>
+                        } />
                       </Route>
                     </Route>
 
@@ -168,3 +188,4 @@ const App = () => (
 );
 
 export default App;
+

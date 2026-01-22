@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
@@ -10,6 +10,7 @@ import { CoupleNav } from "./CoupleNav";
 import { ProSidebar } from "./ProSidebar";
 import { PlannerSidebar } from "./PlannerSidebar";
 import { PlannerHeader } from "./PlannerHeader";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -50,7 +51,21 @@ export const LayoutShell = ({ children }: LayoutShellProps) => {
                 <ProSidebar />
                 <div className="flex-1 flex flex-col md:pl-64 transition-all duration-300">
                     {/* Minimal Pro Header */}
-                    <header className="h-16 md:h-20 bg-white border-b border-slate-200 sticky top-0 z-40 px-6 flex items-center justify-end text-slate-900">
+                    <header className="h-16 md:h-20 bg-white border-b border-slate-200 sticky top-0 z-40 px-6 flex items-center justify-between md:justify-end text-slate-900">
+                        {/* Mobile Menu Trigger */}
+                        <div className="md:hidden">
+                            <Sheet>
+                                <SheetTrigger asChild>
+                                    <button className="p-2 hover:bg-slate-100 rounded-lg">
+                                        <Menu className="w-6 h-6 text-slate-700" />
+                                    </button>
+                                </SheetTrigger>
+                                <SheetContent side="left" className="p-0 border-r-0 w-64 bg-brand-navy">
+                                    <ProSidebar className="flex flex-col h-full bg-brand-navy text-white w-full" />
+                                </SheetContent>
+                            </Sheet>
+                        </div>
+
                         <div className="flex items-center gap-4">
                             <span className="text-sm font-medium text-brand-navy hidden sm:block">
                                 {role === 'admin' ? 'Admin Panel' : 'Business Dashboard'}

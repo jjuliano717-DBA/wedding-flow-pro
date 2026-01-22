@@ -21,14 +21,20 @@ import {
     MessageSquare,
     Shield,
     Sparkles,
-    Briefcase
+    Briefcase,
+    TrendingUp
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { Logo } from "@/components/Logo";
 
-export const ProSidebar = () => {
+interface ProSidebarProps {
+    className?: string; // Allow overriding styles (e.g. for mobile sheet)
+    onNavigate?: () => void; // Callback when a link is clicked (to close sheet)
+}
+
+export const ProSidebar = ({ className, onNavigate }: ProSidebarProps) => {
     const location = useLocation();
     const { logout, user } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -80,9 +86,16 @@ export const ProSidebar = () => {
             title: "OPERATIONS",
             items: [
                 { icon: Calendar, label: user?.role === 'venue' ? "Tour Scheduler" : "Calendar", href: "/pro/calendar" },
-                { icon: MessageSquare, label: "Inquiry Inbox", href: "/pro/leads" },
+
                 { icon: DollarSign, label: "Payments & Invoices", href: "/pro/finance" },
                 { icon: CheckSquare, label: "Legal Contracts", href: "/pro/contracts" },
+            ]
+        },
+        {
+            title: "GROWTH",
+            items: [
+                { icon: Users, label: "Partner Network", href: "/pro/network" },
+                { icon: TrendingUp, label: "Referrals", href: "/pro/referrals" },
             ]
         },
         {
@@ -94,11 +107,11 @@ export const ProSidebar = () => {
         }
     ];
 
+    // Default desktop classes
+    const defaultClasses = `hidden md:flex flex-col h-screen bg-brand-navy text-white transition-all duration-300 border-r border-slate-800 ${isCollapsed ? "w-20" : "w-64"} fixed left-0 top-0 z-50`;
+
     return (
-        <aside
-            className={`hidden md:flex flex-col h-screen bg-brand-navy text-white transition-all duration-300 border-r border-slate-800 ${isCollapsed ? "w-20" : "w-64"
-                } fixed left-0 top-0 z-50`}
-        >
+        <aside className={className || defaultClasses}>
             {/* Sidebar Header */}
             <div className="h-20 flex items-center px-6 border-b border-slate-800">
                 <div className="flex items-center gap-2 h-8 brightness-0 invert">
@@ -126,6 +139,7 @@ export const ProSidebar = () => {
                                 <Link
                                     key={item.label + item.href}
                                     to={item.href}
+                                    onClick={onNavigate}
                                     className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${isActive
                                         ? "bg-rose-gold text-white font-semibold"
                                         : "text-slate-400 hover:bg-slate-800 hover:text-white"

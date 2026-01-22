@@ -35,13 +35,11 @@ const ListVenue = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 py-6 h-auto rounded-full shadow-lg hover:shadow-xl transition-all">
-                                Start Your 30-Day Free Trial
-                                <ArrowRight className="ml-2 w-5 h-5" />
-                            </Button>
-                            <Button variant="outline" size="lg" className="text-lg px-8 py-6 h-auto rounded-full border-primary/20 hover:bg-primary/5">
-                                View Demo
-                                <Play className="ml-2 w-4 h-4 fill-current" />
+                            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 py-6 h-auto rounded-full shadow-lg hover:shadow-xl transition-all" asChild>
+                                <Link to="/auth?mode=signin">
+                                    Start Your 30-Day Free Trial
+                                    <ArrowRight className="ml-2 w-5 h-5" />
+                                </Link>
                             </Button>
                         </div>
                     </motion.div>
