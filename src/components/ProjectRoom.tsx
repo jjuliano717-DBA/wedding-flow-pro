@@ -32,49 +32,61 @@ const saveStoredTasks = (tasks: Task[]) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 };
 
-export function ProjectRoom() {
+
+export function ProjectRoom({ userId }: { userId?: string }) {
     const { user } = useAuth();
+    const targetUserId = userId || user?.id; // Use passed userId or current user
+    const isPlannerView = !!userId; // If userId is passed, we are likely a planner
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [useLocalStorage, setUseLocalStorage] = useState(false);
 
     useEffect(() => {
-        if (user) fetchTasks();
-        else {
-            // Not logged in - use localStorage
+        if (targetUserId) {
+            fetchTasks();
+        } else if (!userId) {
+            // Not logged in and no targetUserId - use localStorage (only for own view)
             setTasks(loadStoredTasks());
             setLoading(false);
             setUseLocalStorage(true);
         }
-    }, [user]);
+    }, [targetUserId]);
 
-    // Sync to localStorage when using localStorage mode
+    // Sync to localStorage when using localStorage mode (only for self)
     useEffect(() => {
-        if (useLocalStorage) {
+        if (useLocalStorage && !userId) {
             saveStoredTasks(tasks);
         }
-    }, [tasks, useLocalStorage]);
+    }, [tasks, useLocalStorage, userId]);
 
     const fetchTasks = async () => {
+        if (!targetUserId) return;
         try {
             const { data, error } = await supabase
                 .from('tasks')
                 .select('*')
+                .eq('user_id', targetUserId) // Fetch tasks for target user
                 .order('created_at', { ascending: false });
 
             if (error) {
-                // Table might not exist - fall back to localStorage
-                console.warn('Tasks table not available, using localStorage');
-                setTasks(loadStoredTasks());
-                setUseLocalStorage(true);
+                // ... fallback logic (skipped for planner view to avoid local pollution)
+                if (!isPlannerView) {
+                    console.warn('Tasks table not available, using localStorage');
+                    setTasks(loadStoredTasks());
+                    setUseLocalStorage(true);
+                } else {
+                    console.error("Error fetching client tasks:", error);
+                }
                 return;
             }
             setTasks(data || []);
         } catch (error) {
             console.error(error);
-            // Fall back to localStorage
-            setTasks(loadStoredTasks());
-            setUseLocalStorage(true);
+            if (!isPlannerView) {
+                setTasks(loadStoredTasks());
+                setUseLocalStorage(true);
+            }
         } finally {
             setLoading(false);
         }
@@ -84,8 +96,8 @@ export function ProjectRoom() {
         const title = prompt("Enter task name:");
         if (!title) return;
 
-        // Use localStorage mode
-        if (useLocalStorage || !user) {
+        // Use localStorage mode (self only)
+        if ((useLocalStorage || !targetUserId) && !isPlannerView) {
             const newTask: Task = {
                 id: Date.now(),
                 title,
@@ -100,7 +112,7 @@ export function ProjectRoom() {
             const { data, error } = await supabase
                 .from('tasks')
                 .insert({
-                    user_id: user.id,
+                    user_id: targetUserId, // Insert for target user
                     title,
                     status
                 })
@@ -113,15 +125,19 @@ export function ProjectRoom() {
             toast.success("Task added!");
         } catch (error) {
             console.error(error);
-            // Fall back to localStorage add
-            const newTask: Task = {
-                id: Date.now(),
-                title,
-                status
-            };
-            setTasks([newTask, ...tasks]);
-            setUseLocalStorage(true);
-            toast.success("Task added (saved locally)");
+            if (!isPlannerView) {
+                // Fall back to localStorage add
+                const newTask: Task = {
+                    id: Date.now(),
+                    title,
+                    status
+                };
+                setTasks([newTask, ...tasks]);
+                setUseLocalStorage(true);
+                toast.success("Task added (saved locally)");
+            } else {
+                toast.error("Failed to add task for client.");
+            }
         }
     };
 
@@ -134,14 +150,16 @@ export function ProjectRoom() {
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2">
-                        🌸 Bridesmaid Squad
+                        🌸 {isPlannerView ? "Client Project Room" : "Bridesmaid Squad"}
                         <span className="text-xs font-normal text-muted-foreground bg-slate-100 px-2 py-1 rounded-full">Private Room</span>
                     </h2>
-                    <p className="text-muted-foreground">Workspace for {user?.fullName?.split(' ')[0] || 'You'} and Friends</p>
+                    <p className="text-muted-foreground">Workspace for {isPlannerView ? 'Planning Team' : (user?.fullName?.split(' ')[0] || 'You') + ' and Friends'}</p>
                 </div>
-                <Button onClick={handleInvite} variant="outline" className="gap-2">
-                    <UserPlus className="w-4 h-4" /> Invite Member
-                </Button>
+                {!isPlannerView && (
+                    <Button onClick={handleInvite} variant="outline" className="gap-2">
+                        <UserPlus className="w-4 h-4" /> Invite Member
+                    </Button>
+                )}
             </div>
 
             <Tabs defaultValue="kanban" className="flex-1 flex flex-col">

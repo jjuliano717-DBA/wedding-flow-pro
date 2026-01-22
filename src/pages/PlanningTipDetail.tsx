@@ -61,7 +61,7 @@ const PlanningTipDetail = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
         );
@@ -69,7 +69,7 @@ const PlanningTipDetail = () => {
 
     if (!tip) {
         return (
-            <div className="min-h-screen bg-background text-center pt-32">
+            <div className="text-center py-20">
                 <h1 className="text-2xl font-serif mb-4">Tip not found</h1>
                 <Link to="/tips"><Button>Return to Tips</Button></Link>
             </div>
@@ -83,78 +83,72 @@ const PlanningTipDetail = () => {
     });
 
     return (
-        <div className="min-h-screen bg-background">
-            <Header />
+        <div className="pb-20">
+            {/* Hero / Header Section */}
+            <div className="container mx-auto px-4 max-w-4xl pt-8">
+                <Link to="/tips" className="inline-flex items-center text-muted-foreground hover:text-primary mb-8 transition-colors">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to All Tips
+                </Link>
 
-            <main className="pt-24 pb-20">
-                {/* Hero / Header Section */}
-                <div className="container mx-auto px-4 max-w-4xl">
-                    <Link to="/tips" className="inline-flex items-center text-muted-foreground hover:text-primary mb-8 transition-colors">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to All Tips
-                    </Link>
+                <div className="space-y-6 text-center mb-12">
+                    <Badge variant="secondary" className="mb-4">{tip.category}</Badge>
+                    <h1 className="font-serif text-3xl md:text-5xl text-foreground leading-tight">
+                        {tip.title}
+                    </h1>
 
-                    <div className="space-y-6 text-center mb-12">
-                        <Badge variant="secondary" className="mb-4">{tip.category}</Badge>
-                        <h1 className="font-serif text-3xl md:text-5xl text-foreground leading-tight">
-                            {tip.title}
-                        </h1>
-
-                        <div className="flex flex-wrap items-center justify-center gap-6 text-muted-foreground text-sm">
-                            <div className="flex items-center gap-2">
-                                <User className="w-4 h-4" />
-                                <span>{tip.author || "Wedding Flow Team"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                <span>{formattedDate}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                <span>{tip.read_time || "5 min read"}</span>
-                            </div>
+                    <div className="flex flex-wrap items-center justify-center gap-6 text-muted-foreground text-sm">
+                        <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span>{tip.author || "Wedding Flow Team"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span>{formattedDate}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            <span>{tip.read_time || "5 min read"}</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Featured Image */}
-                <div className="container mx-auto px-4 max-w-5xl mb-12">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative aspect-video rounded-2xl overflow-hidden shadow-lg"
-                    >
-                        <img
-                            src={tip.image_url || "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200"}
-                            alt={tip.title}
-                            className="w-full h-full object-cover"
-                        />
-                    </motion.div>
+            {/* Featured Image */}
+            <div className="container mx-auto px-4 max-w-5xl mb-12">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative aspect-video rounded-2xl overflow-hidden shadow-lg"
+                >
+                    <img
+                        src={tip.image_url || "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200"}
+                        alt={tip.title}
+                        className="w-full h-full object-cover"
+                    />
+                </motion.div>
+            </div>
+
+            {/* Content */}
+            <article className="container mx-auto px-4 max-w-3xl">
+                <div className="prose prose-lg prose-stone mx-auto">
+                    <p className="lead text-xl text-muted-foreground mb-8 text-center italic font-serif">
+                        {tip.excerpt}
+                    </p>
+                    <div className="whitespace-pre-wrap leading-relaxed text-foreground/90">
+                        {tip.content}
+                    </div>
                 </div>
 
-                {/* Content */}
-                <article className="container mx-auto px-4 max-w-3xl">
-                    <div className="prose prose-lg prose-stone mx-auto">
-                        <p className="lead text-xl text-muted-foreground mb-8 text-center italic font-serif">
-                            {tip.excerpt}
-                        </p>
-                        <div className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                            {tip.content}
-                        </div>
+                <div className="mt-12 pt-8 border-t border-border flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">
+                        Tags: {tip.tags ? tip.tags.join(', ') : 'Wedding, Planning'}
                     </div>
-
-                    <div className="mt-12 pt-8 border-t border-border flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">
-                            Tags: {tip.tags ? tip.tags.join(', ') : 'Wedding, Planning'}
-                        </div>
-                        <Button variant="outline" size="sm" className="gap-2" onClick={handleShare}>
-                            <Share2 className="w-4 h-4" /> Share Article
-                        </Button>
-                    </div>
-                </article>
-            </main>
-
-            <Footer />
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleShare}>
+                        <Share2 className="w-4 h-4" /> Share Article
+                    </Button>
+                </div>
+            </article>
         </div>
     );
 };

@@ -10,8 +10,11 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-export default function Budget() {
+
+export default function Budget({ userId }: { userId?: string }) {
     const { user } = useAuth();
+    const targetUserId = userId || user?.id; // Use passed userId or current user
+
     const [scenarioA, setScenarioA] = useState<ScenarioData | null>(null);
     const [scenarioB, setScenarioB] = useState<ScenarioData | null>(null);
     const [showComparison, setShowComparison] = useState(false);
@@ -21,7 +24,7 @@ export default function Budget() {
 
     // Initial Load
     useEffect(() => {
-        if (!user) return;
+        if (!targetUserId) return;
 
         async function loadScenarios() {
             setLoading(true);
@@ -29,7 +32,7 @@ export default function Budget() {
                 const { data, error } = await supabase
                     .from('budget_scenarios')
                     .select('*')
-                    .eq('user_id', user.id);
+                    .eq('user_id', targetUserId);
 
                 if (error) {
                     console.error("Error loading budgets:", error);
@@ -54,16 +57,16 @@ export default function Budget() {
             }
         }
         loadScenarios();
-    }, [user]);
+    }, [targetUserId]);
 
     // Persist Logic
     const saveScenario = async (type: 'A' | 'B', data: ScenarioData) => {
-        if (!user) return;
+        if (!targetUserId) return;
         try {
             const { error } = await supabase
                 .from('budget_scenarios')
                 .upsert({
-                    user_id: user.id,
+                    user_id: targetUserId,
                     type,
                     data,
                     updated_at: new Date()

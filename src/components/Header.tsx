@@ -33,7 +33,7 @@ const navLinks = [
   { name: "Vendors", href: "/vendors" },
   { name: "Venues", href: "/venues" },
   { name: "Planning Tips", href: "/tips" },
-  { name: "Real Weddings", href: "/weddings" },
+  { name: "Weddings", href: "/weddings" },
 ];
 
 export const Header = () => {

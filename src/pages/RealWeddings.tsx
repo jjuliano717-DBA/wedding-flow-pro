@@ -97,7 +97,7 @@ const RealWeddings = () => {
             className="text-center max-w-3xl mx-auto"
           >
             <h1 className="font-serif text-4xl md:text-6xl text-foreground mb-4">
-              Real Weddings
+              Weddings
             </h1>
             <p className="text-muted-foreground text-lg mb-8">
               Get inspired by real couples and discover the talented professionals who brought their dream weddings to life.

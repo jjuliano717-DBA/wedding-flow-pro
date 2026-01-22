@@ -200,7 +200,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (updatedData.guestCount) updates.guest_count = updatedData.guestCount;
             if (updatedData.planningPace) updates.planning_pace = updatedData.planningPace;
 
-            const { error } = await supabase.from('profiles').upsert(updates);
+            const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
 
             if (error) throw error;
             toast.success("Profile updated");

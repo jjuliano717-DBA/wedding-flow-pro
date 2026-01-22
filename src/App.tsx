@@ -41,8 +41,11 @@ import Leads from "./pages/Leads";
 import Calendar from "./pages/Calendar";
 import Assets from "./pages/Assets";
 import Clients from "./pages/Clients";
+import ClientWorkspace from "./pages/ClientWorkspace";
 import BlackBook from "./pages/BlackBook";
 import Finance from "./pages/Finance";
+import Checklist from "./pages/Checklist";
+import Guests from "./pages/Guests";
 import Contracts from "./pages/Contracts";
 import CoupleWizard from "./pages/onboarding/CoupleWizard";
 import ProNetwork from "./pages/ProNetwork";
@@ -101,6 +104,8 @@ const App = () => (
                     <Route element={<ProtectedRoute allowedRoles={['couple', 'admin']} />}>
                       <Route path="/budget" element={<Budget />} />
                       <Route path="/planner" element={<Planner />} />
+                      <Route path="/checklist" element={<Checklist />} />
+                      <Route path="/guests" element={<Guests />} />
                       <Route path="/moodboard" element={<Moodboard />} />
                       <Route path="/community" element={<Community />} />
                       <Route path="/onboarding/couple" element={
@@ -166,6 +171,7 @@ const App = () => (
                     {/* PLANNER & ADMIN ROUTES */}
                     <Route element={<ProtectedRoute allowedRoles={['planner', 'admin']} />}>
                       <Route path="/clients" element={<Clients />} />
+                      <Route path="/clients/:clientId/workspace" element={<ClientWorkspace />} />
                       <Route path="/black-book" element={<BlackBook />} />
                     </Route>
 
