@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import confetti from "canvas-confetti";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import { toast } from "sonner";
 
 export default function BusinessDashboard() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const role = user?.role || 'vendor';
     const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +44,52 @@ export default function BusinessDashboard() {
         views: 245,
         saved: 8
     });
+
+    // Welcome confetti effect for new venue owners
+    useEffect(() => {
+        const isWelcome = searchParams.get('welcome') === 'true';
+        if (isWelcome) {
+            // Fire confetti
+            const duration = 3000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            const randomInRange = (min: number, max: number) => {
+                return Math.random() * (max - min) + min;
+            };
+
+            const interval = setInterval(() => {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+                });
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+                });
+            }, 250);
+
+            // Show welcome toast
+            toast.success('Welcome to your new Dashboard!', {
+                description: 'Your venue has been successfully claimed. Start managing your business profile now!',
+                duration: 5000,
+            });
+
+            // Remove welcome param from URL
+            searchParams.delete('welcome');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         if (user?.id) {

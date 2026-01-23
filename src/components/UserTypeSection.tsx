@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Heart, Briefcase, Store, Building2, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const userTypes = [
@@ -42,6 +43,7 @@ const userTypes = [
 ];
 
 export const UserTypeSection = () => {
+  const navigate = useNavigate();
   return (
     <section className="py-20 md:py-32 bg-muted/50">
       <div className="container mx-auto px-4">
@@ -60,7 +62,7 @@ export const UserTypeSection = () => {
             How Can We Help You?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Whether you're planning your wedding or part of the wedding industry, 
+            Whether you're planning your wedding or part of the wedding industry,
             we have the tools and connections you need to succeed.
           </p>
         </motion.div>
@@ -120,7 +122,11 @@ export const UserTypeSection = () => {
                   </ul>
 
                   {/* CTA */}
-                  <Button variant="champagne" className="w-full gap-2 group-hover:gap-3 transition-all">
+                  <Button
+                    variant="champagne"
+                    className="w-full gap-2 group-hover:gap-3 transition-all"
+                    onClick={() => navigate("/auth?mode=signup")}
+                  >
                     {user.cta}
                     <ArrowRight className="w-4 h-4" />
                   </Button>

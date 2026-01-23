@@ -162,7 +162,7 @@ export default function Planner() {
                 {/* Main Content: Tasks & Style */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Style Matcher: Promo or Results */}
-                    {user?.stylePreferences?.primaryArchetype ? (
+                    {(user?.stylePreferences && user.stylePreferences?.primaryArchetype) ? (
                         <Card className="bg-slate-900 text-white border-none overflow-hidden relative">
                             <div className="absolute inset-0">
                                 <img

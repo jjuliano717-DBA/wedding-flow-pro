@@ -166,6 +166,37 @@ const VenueDetail = () => {
                     </div>
                 </div>
 
+                {/* Claim Banner for Unclaimed Venues */}
+                {venue.is_claimed === false && (
+                    <div className="container mx-auto px-4 mb-6">
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border-2 border-primary/20 rounded-xl p-6 shadow-lg"
+                        >
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                                        <Check className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-serif text-xl text-foreground mb-1">Own this business?</h3>
+                                        <p className="text-muted-foreground text-sm">
+                                            Claim your free listing to update information, respond to reviews, and connect with couples.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link to={`/business/claim?venue_id=${venue.id}`}>
+                                    <Button size="lg" className="whitespace-nowrap bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all">
+                                        <Check className="w-5 h-5 mr-2" />
+                                        Claim This Venue
+                                    </Button>
+                                </Link>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
                 {/* Hero Gallery - Full Width Slider */}
                 <div className="container mx-auto px-4 mb-12">
                     <div className="relative w-full h-[60vh] min-h-[400px] max-h-[600px] rounded-2xl overflow-hidden bg-slate-100">

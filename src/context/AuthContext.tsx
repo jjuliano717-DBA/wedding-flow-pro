@@ -24,7 +24,12 @@ export interface User {
     // Architecture Fields
     budgetTier?: '$' | '$$' | '$$$' | '$$$$';
     stressLevel?: number;
-    stylePreferences?: any; // Record<string, any> for complex profiles
+    stylePreferences?: {
+        primaryArchetype: string;
+        secondaryArchetype?: string;
+        scoreBreakdown?: Record<string, number>;
+        generatedAt?: string;
+    };
 
     // Wedding Planning Fields
     weddingDate?: string;
@@ -94,7 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .single();
 
             if (error) {
-                console.error("Error fetching user profile:", error);
+                console.error("Error fetching user profile:", JSON.stringify(error, null, 2));
                 // Fallback to metadata if persistent profile fetch fails
                 setUser({
                     id: session.user.id,
@@ -202,7 +207,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase update error:", JSON.stringify(error, null, 2));
+                throw error;
+            }
             toast.success("Profile updated");
         } catch (error) {
             toast.error("Error updating profile");

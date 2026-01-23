@@ -54,6 +54,7 @@ import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import Contact from "./pages/Contact";
 import TermsOfService from "./pages/legal/TermsOfService";
 import CookiePolicy from "./pages/legal/CookiePolicy";
+import ClaimBusiness from "./pages/ClaimBusiness";
 
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/list-venue" element={<ListVenue />} />
                     <Route path="/join-vendor" element={<ListBusiness />} />
+                    <Route path="/business/claim" element={<ClaimBusiness />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/partner" element={<Partner />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -130,6 +132,11 @@ const App = () => (
 
                       {/* Isolated /pro group for operational workflows */}
                       <Route path="/pro">
+                        <Route path="dashboard" element={
+                          <BusinessDashboardLayout>
+                            <BusinessDashboard />
+                          </BusinessDashboardLayout>
+                        } />
                         <Route path="leads" element={
                           <BusinessDashboardLayout>
                             <Leads />

@@ -36,6 +36,8 @@ DROP POLICY IF EXISTS "Public threads" ON threads;
 DROP POLICY IF EXISTS "Users can create threads" ON threads;
 DROP POLICY IF EXISTS "Users create threads" ON threads;
 DROP POLICY IF EXISTS "Insert threads" ON threads;
+DROP POLICY IF EXISTS "Anyone can view threads" ON threads;
+DROP POLICY IF EXISTS "Authenticated users can create threads" ON threads;
 
 CREATE POLICY "Anyone can view threads" ON threads
   FOR SELECT USING (true);
@@ -48,6 +50,7 @@ CREATE POLICY "Authenticated users can create threads" ON threads
 DROP POLICY IF EXISTS "Planners can view swipes for client projects" ON user_swipes;
 DROP POLICY IF EXISTS "Users can manage their own swipes" ON user_swipes;
 DROP POLICY IF EXISTS "Vendors can view swipes on their assets" ON user_swipes;
+DROP POLICY IF EXISTS "Users can manage swipes" ON user_swipes;
 
 -- Single consolidated policy for all swipe viewing/management
 CREATE POLICY "Users can manage swipes" ON user_swipes
@@ -77,6 +80,7 @@ CREATE POLICY "Users can manage swipes" ON user_swipes
 DROP POLICY IF EXISTS "Couples can view vendor availability" ON vendor_availability;
 DROP POLICY IF EXISTS "Planners can view vendor availability" ON vendor_availability;
 DROP POLICY IF EXISTS "Vendors can manage their own availability" ON vendor_availability;
+DROP POLICY IF EXISTS "Anyone can view and vendors can manage availability" ON vendor_availability;
 
 -- Single consolidated policy
 CREATE POLICY "Anyone can view and vendors can manage availability" ON vendor_availability
@@ -105,6 +109,9 @@ DROP POLICY IF EXISTS "Vendors are viewable by everyone." ON vendors;
 DROP POLICY IF EXISTS "Users can update their own vendor profile" ON vendors;
 DROP POLICY IF EXISTS "Vendors can update own listing" ON vendors;
 DROP POLICY IF EXISTS "Allow vendor profile creation" ON vendors;
+DROP POLICY IF EXISTS "Vendors can update own profile" ON vendors;
+DROP POLICY IF EXISTS "Authenticated users can create vendor profiles" ON vendors;
+DROP POLICY IF EXISTS "Public can view unclaimed venues" ON vendors;
 
 -- Single policy for viewing vendors
 CREATE POLICY "Anyone can view vendors" ON vendors
@@ -130,6 +137,7 @@ CREATE POLICY "Authenticated users can create vendor profiles" ON vendors
 -- Consolidate: "Allow Public Access" + "Venues are viewable by everyone"
 DROP POLICY IF EXISTS "Allow Public Access" ON venues;
 DROP POLICY IF EXISTS "Venues are viewable by everyone." ON venues;
+DROP POLICY IF EXISTS "Anyone can view venues" ON venues;
 
 CREATE POLICY "Anyone can view venues" ON venues
   FOR SELECT USING (true);
