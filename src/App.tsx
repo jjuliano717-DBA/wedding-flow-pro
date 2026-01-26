@@ -11,6 +11,8 @@ import Index from "./pages/Index";
 import RealWeddings from "./pages/RealWeddings";
 import VendorsDirectory from "./pages/VendorsDirectory";
 import VenuesDirectory from "./pages/VenuesDirectory";
+import { VendorsSearch } from "./pages/VendorsSearch";
+import { VenuesSearch } from "./pages/VenuesSearch";
 import VendorDetail from "./pages/VendorDetail";
 import VenueDetail from "./pages/VenueDetail";
 import PlanningTips from "./pages/PlanningTips";
@@ -75,8 +77,10 @@ const App = () => (
                     <Route path="/" element={<Index />} />
                     <Route path="/discover" element={<Discover />} />
                     <Route path="/weddings" element={<RealWeddings />} />
-                    <Route path="/vendors" element={<VendorsDirectory />} />
-                    <Route path="/venues" element={<VenuesDirectory />} />
+                    <Route path="/vendors" element={<VendorsSearch />} />
+                    <Route path="/vendors/directory" element={<VendorsDirectory />} />
+                    <Route path="/venues" element={<VenuesSearch />} />
+                    <Route path="/venues/directory" element={<VenuesDirectory />} />
                     <Route path="/vendors/:id" element={<VendorDetail />} />
                     <Route path="/venues/:id" element={<VenueDetail />} />
                     <Route path="/tips" element={<PlanningTips />} />

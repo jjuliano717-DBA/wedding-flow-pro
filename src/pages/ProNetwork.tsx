@@ -303,7 +303,6 @@ export default function ProNetwork() {
                                     onValueChange={setCommissionRate}
                                     max={30}
                                     step={1}
-                                    step={1}
                                     className="py-6 cursor-pointer"
                                 />
                                 <p className="text-xs text-slate-500 text-center">

@@ -39,7 +39,7 @@ interface Vendor {
     type: string;
     location: string;
     website: string;
-    service_zipcodes: string[];
+    service_areas: string[];
     google_rating: number;
     google_reviews: number;
     heart_rating: number;
@@ -555,8 +555,8 @@ const VendorDetail = () => {
                                         <div>
                                             <p className="font-medium">Service Areas (Zipcodes)</p>
                                             <p className="text-sm text-muted-foreground">
-                                                {vendor.service_zipcodes && vendor.service_zipcodes.length > 0
-                                                    ? vendor.service_zipcodes.join(', ')
+                                                {vendor.service_areas && vendor.service_areas.length > 0
+                                                    ? vendor.service_areas.join(', ')
                                                     : "Contact for service area details"
                                                 }
                                             </p>
